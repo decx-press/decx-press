@@ -1,0 +1,109 @@
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build directories
+dist/
+build/
+out/
+target/
+coverage/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Compiled files
+*.class
+*.o
+*.so
+*.exe
+*.dll
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+
+# Python-specific
+Pipfile.lock
+*.egg-info/
+.eggs/
+.venv/
+
+# Java-specific
+*.jar
+*.war
+*.ear
+
+# Rust-specific
+target/
+
+# Go-specific
+bin/
+pkg/
+
+# Ruby-specific
+*.gem
+.ruby-version
+.ruby-gemset
+
+# C/C++ specific
+*.obj
+*.lib
+*.pdb
+*.exe
+*.ilk
+
+# Backup files
+*.bak
+*.orig
+*.save
+
+# Lock files
+package-lock.json
+yarn.lock
+
+# Git files
+.git/
+.gitconfig
+
+# System-specific
+*.iml
+*.exe
+*.out
+*.app
+
+# Coverage reports
+coverage/
+*.lcov
