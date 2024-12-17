@@ -4,6 +4,9 @@ pragma solidity ^0.8.28;
 // Uncomment this line to use console.log
 // import "hardhat/console.sol";
 
+// TODO: this is a simple example of a contract that can be used to deploy a contract.
+// It is not meant to be used in production. Delete this file and create your own contract.
+
 contract Lock {
     uint public unlockTime;
     address payable public owner;
