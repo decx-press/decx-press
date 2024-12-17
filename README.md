@@ -59,11 +59,11 @@ This will start a local Ethereum node on port 8545 and will generate a list of a
 #### 5. Deploy the Contracts
 Deploy your contracts to the local Hardhat node:
 > ```bash
-> npm run deploy --module=module_name --network=network_name # defined in package.json under 'scripts'
+> npm run deploy --module=module_file_name --network=network_name # defined in package.json under 'scripts'
 > ```
-For `module_name`, use the name of the module you want to deploy. Modules are located in the `ignition` directory.
+For `module_file_name`, use the name of the module file you want to deploy. Modules are located in the `ignition/modules` directory.
 For `network_name`, use:
-- **`localhost`** for local testing.
+- **`localhost`** for local testing. (a running local hardhat node is required)
 - **`sepolia`** for Sepolia testnet.
 - **`mainnet`** for Ethereum mainnet (use with caution).
 

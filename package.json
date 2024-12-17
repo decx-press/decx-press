@@ -10,7 +10,7 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
-    "deploy": "hardhat ignition deploy ignition/$npm_config_module.ts --network $npm_config_network",
+    "deploy": "hardhat ignition deploy ignition/modules/$npm_config_module.ts --network $npm_config_network",
     "coverage": "hardhat coverage",
     "console": "hardhat console --network localhost",
     "node": "hardhat node"
