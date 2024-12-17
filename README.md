@@ -57,7 +57,7 @@ Start a local Ethereum node for testing and development:
 This will start a local Ethereum node on port 8545 and will generate a list of accounts with private keys and 1000 ETH for each account.
 
 #### 5. Deploy the Contracts
-Deploy your contracts to the local Hardhat node:
+Deploy your contracts to the local Hardhat node (must have a running local hardhat node in the previous step):
 > ```bash
 > npm run deploy --module=module_file_name --network=network_name # defined in package.json under 'scripts'
 > ```
@@ -66,6 +66,11 @@ For `network_name`, use:
 - **`localhost`** for local testing. (a running local hardhat node is required)
 - **`sepolia`** for Sepolia testnet.
 - **`mainnet`** for Ethereum mainnet (use with caution).
+
+To use the placeholder Lock module, run:
+> ```bash
+> npm run deploy --module=Lock --network=localhost
+> ```
 
 #### 6. Run Tests
 Run your tests using Hardhat’s test runner:
