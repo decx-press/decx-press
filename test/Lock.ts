@@ -1,3 +1,6 @@
+// TODO: this is a simple example of a test that can be used to test a contract.
+// Once the first test is written, delete this file.
+
 import {
   time,
   loadFixture,
