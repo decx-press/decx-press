@@ -22,4 +22,11 @@ interface IAtomicUnit {
         @return The hash of the character.
     */
     function getAtomicUnitHash(string memory character) external view returns (bytes32);
+
+    /**
+        @dev Get the hash of an atomic unit.
+        @param character The character to get the hash of.
+        @return The hash of the character.
+    */
+    function atomicLookup(string memory character) external view returns (bytes32);
 }

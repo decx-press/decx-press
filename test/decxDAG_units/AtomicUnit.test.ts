@@ -5,7 +5,7 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import "@nomicfoundation/hardhat-chai-matchers";
 
 // TODO: move to constants string?
-const invalidInputError = "Invalid input: Atomic Unit must accept only a single UTF character";
+const INVALID_CHARACTER_ERROR = "AtomicUnit_InvalidCharacter";
 
 describe("AtomicUnit", function () {
   // Define a fixture for consistent setup across tests
@@ -48,36 +48,61 @@ describe("AtomicUnit", function () {
       expect(storedHash).to.equal(hash);
     });
 
-    it("Should prevent duplicate Atomic Units", async function () {
+    it("Should return the existing hash for duplicate Atomic Units", async function () {
+      const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
+    
+      const character = "a";
+    
+      // Add the first atomic unit
+      await atomicUnitContract.addAtomicUnit(character);
+    
+      // Extract the emitted hash
+      const hash1 = await atomicUnitContract.atomicLookup(character);
+    
+      // Add the same atomic unit again
+      await atomicUnitContract.addAtomicUnit(character);
+    
+      // Extract the returned hash
+      const hash2 = await atomicUnitContract.atomicLookup(character);
+    
+      // Verify that the hashes are the same
+      expect(hash1).to.equal(hash2);
+    });
+
+    it("Should reject empty inputs", async function () {
       const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
 
-      const character = "a";
-
-      // Add atomic unit
-      await atomicUnitContract.addAtomicUnit(character);
-
-      // Try adding the same unit again
-      await expect(atomicUnitContract.addAtomicUnit(character)).to.be.revertedWith(
-        "Atomic Unit already exists"
+      await expect(atomicUnitContract.addAtomicUnit("")).to.be.revertedWithCustomError(
+        atomicUnitContract,
+        INVALID_CHARACTER_ERROR
       );
     });
 
-    it("Should reject invalid inputs", async function () {
+    it("Should reject multiple inputs", async function () {
       const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
 
-      // Test empty string
-      await expect(atomicUnitContract.addAtomicUnit("")).to.be.revertedWith(
-        invalidInputError
+      await expect(atomicUnitContract.addAtomicUnit("ab")).to.be.revertedWithCustomError(
+        atomicUnitContract,
+        INVALID_CHARACTER_ERROR
+      );
+    });
+
+    it("Should reject control characters & null inputs", async function () {
+      const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
+
+      await expect(atomicUnitContract.addAtomicUnit("\x00")).to.be.revertedWithCustomError(
+        atomicUnitContract,
+        INVALID_CHARACTER_ERROR
       );
 
-      // Test multiple characters
-      await expect(atomicUnitContract.addAtomicUnit("ab")).to.be.revertedWith(
-        invalidInputError
+      await expect(atomicUnitContract.addAtomicUnit("\x0D")).to.be.revertedWithCustomError(
+        atomicUnitContract,
+        INVALID_CHARACTER_ERROR
       );
 
-      // Test null character (edge case)
-      await expect(atomicUnitContract.addAtomicUnit("\0")).to.be.revertedWith(
-        invalidInputError
+      await expect(atomicUnitContract.addAtomicUnit("\x7F")).to.be.revertedWithCustomError(
+        atomicUnitContract,
+        INVALID_CHARACTER_ERROR
       );
     });
   });
@@ -88,15 +113,19 @@ describe("AtomicUnit", function () {
 
       const character = "a";
 
-      // Measure gas cost for a new atomic unit
+      // Add the first atomic unit
       const tx1 = await atomicUnitContract.addAtomicUnit(character);
       const receipt1 = await tx1.wait();
-      console.log("Gas used for first insertion:", receipt1.gasUsed.toString());
+      // Add the same atomic unit again
+      const tx2 = await atomicUnitContract.addAtomicUnit(character);
+      const receipt2 = await tx2.wait();
 
-      // Measure gas cost for a duplicate attempt
-      await expect(atomicUnitContract.addAtomicUnit(character)).to.be.revertedWith(
-        "Atomic Unit already exists"
-      );
+      // uncomment to see the gas used
+      // console.log(`-- Gas used for 1st insertion of "${character}": ${receipt1.gasUsed.toString()}`);
+      // console.log(`-- Gas used for 2nd insertion of "${character}": ${receipt2.gasUsed.toString()}`);
+
+      // Confirm no additional storage occurred by ensuring the gas cost is minimal
+      expect(receipt2.gasUsed).to.be.lessThan(receipt1.gasUsed);
     });
   });
 });
