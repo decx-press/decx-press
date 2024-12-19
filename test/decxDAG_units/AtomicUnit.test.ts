@@ -50,21 +50,21 @@ describe("AtomicUnit", function () {
 
     it("Should return the existing hash for duplicate Atomic Units", async function () {
       const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
-    
+
       const character = "a";
-    
+
       // Add the first atomic unit
       await atomicUnitContract.addAtomicUnit(character);
-    
+
       // Extract the emitted hash
       const hash1 = await atomicUnitContract.atomicLookup(character);
-    
+
       // Add the same atomic unit again
       await atomicUnitContract.addAtomicUnit(character);
-    
+
       // Extract the returned hash
       const hash2 = await atomicUnitContract.atomicLookup(character);
-    
+
       // Verify that the hashes are the same
       expect(hash1).to.equal(hash2);
     });
