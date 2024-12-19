@@ -1,7 +1,8 @@
+import { ethers } from "hardhat";
 import { expect } from "chai";
 import { keccak256, toUtf8Bytes } from "ethers";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
-import hre from "hardhat";
+import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import "@nomicfoundation/hardhat-chai-matchers";
 
 // TODO: move to constants string?
 const invalidInputError = "Invalid input: Atomic Unit must accept only a single UTF character";
@@ -10,7 +11,7 @@ describe("AtomicUnit", function () {
   // Define a fixture for consistent setup across tests
   async function deployAtomicUnitFixture() {
     // Get contract factory
-    const AtomicUnit = await hre.ethers.getContractFactory("AtomicUnit");
+    const AtomicUnit = await ethers.getContractFactory("AtomicUnit");
 
     // Deploy the contract
     const atomicUnitContract = await AtomicUnit.deploy();
