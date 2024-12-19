@@ -1,1 +1,6 @@
-// TODO: the function signatures for the Atomic Unit contract.
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.28;
+
+interface IAtomicUnit {
+    // TODO: Implement the Atomic Unit interface function signatures.
+}
