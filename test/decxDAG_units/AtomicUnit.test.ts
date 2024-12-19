@@ -1,6 +1,6 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { keccak256, toUtf8Bytes } from "ethers";
+import { keccak256, AbiCoder } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import "@nomicfoundation/hardhat-chai-matchers";
 
@@ -33,17 +33,18 @@ describe("AtomicUnit", function () {
       const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
 
       const character = "a";
-      const hash = keccak256(toUtf8Bytes(character));
+      // NOTE:this may not be the same as the way solidity does it so beware!
+      const hash = keccak256(AbiCoder.defaultAbiCoder().encode(["string"], [character]));
 
-      // Add atomic unit (uses generic named "add" - rename to whatever it ends up being)
-      await atomicUnitContract.add(character);
+      // Add the atomic unit
+      await atomicUnitContract.addAtomicUnit(character);
 
-      // Check that the hash exists (uses generic named "find" - rename to whatever it ends up being)
-      const exists = await atomicUnitContract.find(hash);
+      // Check that the hash exists
+      const exists = await atomicUnitContract.isAtomicUnitPresent(hash);
       expect(exists).to.be.true;
 
-      // Check reverse lookup (uses generic named "get" - rename to whatever it ends up being)
-      const storedHash = await atomicUnitContract.get(character);
+      // Check reverse lookup
+      const storedHash = await atomicUnitContract.getAtomicUnitHash(character);
       expect(storedHash).to.equal(hash);
     });
 
@@ -53,10 +54,10 @@ describe("AtomicUnit", function () {
       const character = "a";
 
       // Add atomic unit
-      await atomicUnitContract.add(character);
+      await atomicUnitContract.addAtomicUnit(character);
 
       // Try adding the same unit again
-      await expect(atomicUnitContract.add(character)).to.be.revertedWith(
+      await expect(atomicUnitContract.addAtomicUnit(character)).to.be.revertedWith(
         "Atomic Unit already exists"
       );
     });
@@ -65,17 +66,17 @@ describe("AtomicUnit", function () {
       const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
 
       // Test empty string
-      await expect(atomicUnitContract.add("")).to.be.revertedWith(
+      await expect(atomicUnitContract.addAtomicUnit("")).to.be.revertedWith(
         invalidInputError
       );
 
       // Test multiple characters
-      await expect(atomicUnitContract.add("ab")).to.be.revertedWith(
+      await expect(atomicUnitContract.addAtomicUnit("ab")).to.be.revertedWith(
         invalidInputError
       );
 
       // Test null character (edge case)
-      await expect(atomicUnitContract.add("\0")).to.be.revertedWith(
+      await expect(atomicUnitContract.addAtomicUnit("\0")).to.be.revertedWith(
         invalidInputError
       );
     });
@@ -88,12 +89,12 @@ describe("AtomicUnit", function () {
       const character = "a";
 
       // Measure gas cost for a new atomic unit
-      const tx1 = await atomicUnitContract.add(character);
+      const tx1 = await atomicUnitContract.addAtomicUnit(character);
       const receipt1 = await tx1.wait();
       console.log("Gas used for first insertion:", receipt1.gasUsed.toString());
 
       // Measure gas cost for a duplicate attempt
-      await expect(atomicUnitContract.add(character)).to.be.revertedWith(
+      await expect(atomicUnitContract.addAtomicUnit(character)).to.be.revertedWith(
         "Atomic Unit already exists"
       );
     });
