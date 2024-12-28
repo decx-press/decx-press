@@ -5,6 +5,9 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import "@nomicfoundation/hardhat-chai-matchers";
 import { TestUtils } from "../TestUtils";
 
+// Use a single character string for testing
+const CHAR = "a";
+
 // TODO: move to constants string?
 const INVALID_CHARACTER_ERROR = "AtomicUnit_InvalidCharacter";
 
@@ -30,43 +33,40 @@ describe("AtomicUnit", function () {
   });
 
   describe("Storage and Lookup", function () {
-    it("Should store a single UTF char as an Atomic Unit", async function () {
+    it("Should store a single UTF CHARacter as an Atomic Unit", async function () {
       const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
-      const char = "a";
-      const hash = TestUtils.GenerateAtomicUnit(char);
+      const hash = TestUtils.GenerateAtomicUnit(CHAR);
 
       // Add the atomic unit
-      await atomicUnitContract.addAtomicUnit(char);
+      await atomicUnitContract.addAtomicUnit(CHAR);
 
       // Check that the hash exists
       const exists = await atomicUnitContract.isAtomicUnitPresent(hash);
       expect(exists).to.be.true;
 
       // Check reverse lookup
-      const storedHash = await atomicUnitContract.getAtomicUnitHash(char);
+      const storedHash = await atomicUnitContract.getAtomicUnitHash(CHAR);
       expect(storedHash).to.equal(hash);
     });
 
     it("Should return the existing hash for duplicate Atomic Units", async function () {
       const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
 
-      const char = "a";
-
       // Add the first atomic unit
-      await atomicUnitContract.addAtomicUnit(char);
+      await atomicUnitContract.addAtomicUnit(CHAR);
 
       // Extract the emitted hash
-      const hash1 = await atomicUnitContract.atomicLookup(char);
+      const hash1 = await atomicUnitContract.atomicLookup(CHAR);
 
       // Check that the atomicLookupMapping is not zero for the added character
       expect(await atomicUnitContract.getAtomicUnitHash(character)).to.not.equal(ethers.ZeroHash);
       expect(hash1).to.not.equal(ethers.ZeroHash); // Ensure the returned hash is also not zero
 
       // Add the same atomic unit again
-      await atomicUnitContract.addAtomicUnit(char);
+      await atomicUnitContract.addAtomicUnit(CHAR);
 
       // Extract the returned hash
-      const hash2 = await atomicUnitContract.atomicLookup(char);
+      const hash2 = await atomicUnitContract.atomicLookup(CHAR);
 
       // Verify that the hashes are the same
       expect(hash1).to.equal(hash2);
@@ -90,7 +90,7 @@ describe("AtomicUnit", function () {
       );
     });
 
-    it("Should reject control chars & null inputs", async function () {
+    it("Should reject control characters & null inputs", async function () {
       const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
 
       await expect(atomicUnitContract.addAtomicUnit("\x00")).to.be.revertedWithCustomError(
@@ -153,18 +153,16 @@ describe("AtomicUnit", function () {
     it("Should optimize gas usage by avoiding duplicate hashing", async function () {
       const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
 
-      const char = "a";
-
       // Add the first atomic unit
-      const tx1 = await atomicUnitContract.addAtomicUnit(char);
+      const tx1 = await atomicUnitContract.addAtomicUnit(CHAR);
       const receipt1 = await tx1.wait();
       // Add the same atomic unit again
-      const tx2 = await atomicUnitContract.addAtomicUnit(char);
+      const tx2 = await atomicUnitContract.addAtomicUnit(CHAR);
       const receipt2 = await tx2.wait();
 
       // uncomment to see the gas used
-      // console.log(`-- Gas used for 1st insertion of "${char}": ${receipt1.gasUsed.toString()}`);
-      // console.log(`-- Gas used for 2nd insertion of "${char}": ${receipt2.gasUsed.toString()}`);
+      console.log(`-- Gas used for 1st insertion of "${CHAR}": ${receipt1.gasUsed.toString()}`);
+      console.log(`-- Gas used for 2nd insertion of "${CHAR}": ${receipt2.gasUsed.toString()}`);
 
       // Confirm no additional storage occurred by ensuring the gas cost is minimal
       expect(receipt2.gasUsed).to.be.lessThan(receipt1.gasUsed);
