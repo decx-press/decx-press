@@ -2,13 +2,6 @@ import { keccak256 } from "ethers";
 import { AbiCoder } from "ethers";
 
 
-/**
- * TODO: make several utility functions that can be used in tests
- * - generate a Composite Unit from an array of Atomic Units
- * - generate a Blob Unit from an array of Composite Units
- * - generate a Sentence Unit from an array of Blob Units
- * - generate a Pressing Unit from an array of Sentence Units
- */
 export class TestUtils {
 
     /**

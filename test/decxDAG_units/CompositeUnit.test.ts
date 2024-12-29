@@ -3,8 +3,10 @@ import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import "@nomicfoundation/hardhat-chai-matchers";
 import { TestUtils } from "../TestUtils";
+
 // TODO: move to constants string?
 const INVALID_HASH_ERROR = "CompositeUnit_InvalidHash";
+const INVALID_ARGS_ERROR = "CompositeUnit_InvalidArgs";
 
 // Generate characters and their atomic hashes
 const CHAR1 = "a";
@@ -49,7 +51,7 @@ describe("CompositeUnit", function () {
 
       // Add the composite unit and wait for the transaction
       const tx = await compositeUnitContract.addCompositeUnit(atomicHashes);
-      await tx.wait();  // Wait for transaction to be mined
+      await tx.wait();
 
       // Calculate the expected hash the same way the contract does
       const expectedHash = TestUtils.GenerateHashFromHashes(atomicHashes);
@@ -75,48 +77,48 @@ describe("CompositeUnit", function () {
       await compositeUnitContract.addCompositeUnit(atomicHashes);
 
       // Extract the emitted hash
-      const hash1 = await compositeUnitContract.compositeLookup(atomicHash1, atomicHash2);
+      const hash1 = await compositeUnitContract.getCompositeHash(atomicHash1, atomicHash2);
 
       // Add the same composite unit again
-      await compositeUnitContract.addCompositeUnit(atomicHash1, atomicHash2);
+      await compositeUnitContract.addCompositeUnit(atomicHashes);
 
       // Extract the returned hash
-      const hash2 = await compositeUnitContract.compositeLookup(atomicHash1, atomicHash2);
+      const hash2 = await compositeUnitContract.getCompositeHash(atomicHash1, atomicHash2);
 
       // Verify that the hashes are the same
       expect(hash1).to.equal(hash2);
     });
 
-    it("Should verify that the input is are valid Keccak-256 hashes", async function () {
+    it("Should ensure that the input is an array of two hashes", async function () {
       const { atomicUnitContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
-      const atomicHash1 = await atomicUnitContract.addAtomicUnit(CHAR1);
 
-      const invalidHashes1 = [atomicHash1, "0xnot_a_valid_hash"];
+      // Add atomic units and get their hashes
+      await atomicUnitContract.addAtomicUnit(CHAR1);
+      await atomicUnitContract.addAtomicUnit(CHAR2);
+
+      // Get the actual atomic unit hashes using getAtomicUnitHash
+      const atomicHash1 = await atomicUnitContract.getAtomicUnitHash(CHAR1);
+      const atomicHash2 = await atomicUnitContract.getAtomicUnitHash(CHAR2);
+
+      const invalidHashes1 = [atomicHash1, atomicHash2, atomicHash1];
       await expect(compositeUnitContract.addCompositeUnit(invalidHashes1)).to.be.revertedWithCustomError(
         compositeUnitContract,
-        INVALID_HASH_ERROR
+        INVALID_ARGS_ERROR
       );
+    });
 
-      const invalidHashes2 = [atomicHash1, "12345"];
-      await expect(compositeUnitContract.addCompositeUnit(invalidHashes2)).to.be.revertedWithCustomError(
-        compositeUnitContract,
-        INVALID_HASH_ERROR
-      );
+    it("Should not allow invalid hash pairs", async function () {
+      const { atomicUnitContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
 
-      const invalidHashes3 = [atomicHash1, "0x6f1c3b3c1c1e1c1e1c1e1c1e1c1e1c1e1c1e1c1e1c1e1c1c1e1c1c1e1c1c1"];
-      await expect(compositeUnitContract.addCompositeUnit(invalidHashes3)).to.be.revertedWithCustomError(
-        compositeUnitContract,
-        INVALID_HASH_ERROR
-      );
+      // First add the atomic unit
+      await atomicUnitContract.addAtomicUnit(CHAR1);
+      const atomicHash1 = await atomicUnitContract.getAtomicUnitHash(CHAR1);
 
-      const invalidHashes4 = [atomicHash1, "0xthisisa64charhexstringwiththe0xprefixbutusesthewrongcharacters"];
-      await expect(compositeUnitContract.addCompositeUnit(invalidHashes4)).to.be.revertedWithCustomError(
-        compositeUnitContract,
-        INVALID_HASH_ERROR
-      );
+      // Create a fake hash that's the right format but not registered in AtomicUnit
+      const fakeHash = "0x" + "1".repeat(64);  // Creates a valid bytes32 hex string
+      const atomicHashes = [atomicHash1, fakeHash];
 
-      const invalidHashes5 = [atomicHash1, "this is a plain string with 64 characters!!!!!!!!!!!!!!!!!!!!!!!"];
-      await expect(compositeUnitContract.addCompositeUnit(invalidHashes5)).to.be.revertedWithCustomError(
+      await expect(compositeUnitContract.addCompositeUnit(atomicHashes)).to.be.revertedWithCustomError(
         compositeUnitContract,
         INVALID_HASH_ERROR
       );
