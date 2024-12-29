@@ -35,7 +35,7 @@ describe("AtomicUnit", function () {
   describe("Storage and Lookup", function () {
     it("Should store a single UTF CHARacter as an Atomic Unit", async function () {
       const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
-      const hash = TestUtils.GenerateAtomicUnit(CHAR);
+      const hash = TestUtils.GenerateHashFromChar(CHAR);
 
       // Add the atomic unit
       await atomicUnitContract.addAtomicUnit(CHAR);
