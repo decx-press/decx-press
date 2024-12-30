@@ -63,11 +63,11 @@ describe("CompositeUnit", function () {
 
     it("Should return the existing hash for duplicate Composite Units", async function () {
       const { atomicUnitContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
-      
+
       // Add atomic units and get their hashes
       await atomicUnitContract.addAtomicUnit(CHAR1);
       await atomicUnitContract.addAtomicUnit(CHAR2);
-      
+
       // Get the actual atomic unit hashes using getAtomicUnitHash
       const atomicHash1 = await atomicUnitContract.getAtomicUnitHash(CHAR1);
       const atomicHash2 = await atomicUnitContract.getAtomicUnitHash(CHAR2);
@@ -116,11 +116,46 @@ describe("CompositeUnit", function () {
 
       // Create a fake hash that's the right format but not registered in AtomicUnit
       const fakeHash = "0x" + "1".repeat(64);  // Creates a valid bytes32 hex string
-      const atomicHashes = [atomicHash1, fakeHash];
+      const atomicHashes1 = [atomicHash1, fakeHash];
+      const atomicHashes2 = [fakeHash, atomicHash1];
+      const atomicHashes3 = [fakeHash, fakeHash];
 
-      await expect(compositeUnitContract.addCompositeUnit(atomicHashes)).to.be.revertedWithCustomError(
+      await expect(compositeUnitContract.addCompositeUnit(atomicHashes1)).to.be.revertedWithCustomError(
         compositeUnitContract,
         INVALID_HASH_ERROR
+      );
+
+      await expect(compositeUnitContract.addCompositeUnit(atomicHashes2)).to.be.revertedWithCustomError(
+        compositeUnitContract,
+        INVALID_HASH_ERROR
+      );
+
+      await expect(compositeUnitContract.addCompositeUnit(atomicHashes3)).to.be.revertedWithCustomError(
+        compositeUnitContract,
+        INVALID_HASH_ERROR
+      );
+    });
+
+    it("Should handle empty array input", async function () {
+      const { compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
+
+      const emptyArray: string[] = [];
+      await expect(compositeUnitContract.addCompositeUnit(emptyArray)).to.be.revertedWithCustomError(
+        compositeUnitContract,
+        INVALID_ARGS_ERROR
+      );
+    });
+
+    it("Should reject single hash input", async function () {
+      const { atomicUnitContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
+
+      await atomicUnitContract.addAtomicUnit(CHAR1);
+      const atomicHash1 = await atomicUnitContract.getAtomicUnitHash(CHAR1);
+
+      // Try with just one hash
+      await expect(compositeUnitContract.addCompositeUnit([atomicHash1])).to.be.revertedWithCustomError(
+        compositeUnitContract,
+        INVALID_ARGS_ERROR
       );
     });
   });
@@ -128,11 +163,11 @@ describe("CompositeUnit", function () {
   describe("Gas Optimization", function () {
     it("Should optimize gas usage by avoiding duplicate hashing", async function () {
       const { atomicUnitContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
-      
+
       // Add atomic units and get their hashes
       await atomicUnitContract.addAtomicUnit(CHAR1);
       await atomicUnitContract.addAtomicUnit(CHAR2);
-      
+
       // Get the actual atomic unit hashes using getAtomicUnitHash
       const atomicHash1 = await atomicUnitContract.getAtomicUnitHash(CHAR1);
       const atomicHash2 = await atomicUnitContract.getAtomicUnitHash(CHAR2);
@@ -141,7 +176,7 @@ describe("CompositeUnit", function () {
       // Add a composite unit
       const tx1 = await compositeUnitContract.addCompositeUnit(atomicHashes);
       const receipt1 = await tx1.wait();
-      
+
       // Add the same composite unit again
       const tx2 = await compositeUnitContract.addCompositeUnit(atomicHashes);
       const receipt2 = await tx2.wait();
