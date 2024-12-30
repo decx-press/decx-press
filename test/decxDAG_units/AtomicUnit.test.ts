@@ -107,6 +107,42 @@ describe("AtomicUnit", function () {
     });
   });
 
+  describe("Character Validation through addAtomicUnit", function () {
+    it("Should handle all UTF-8 cases", async function () {
+        const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
+
+        // Valid cases
+        await expect(atomicUnitContract.addAtomicUnit("a")).to.not.be.reverted;  // ASCII
+        await expect(atomicUnitContract.addAtomicUnit("é")).to.not.be.reverted;  // 2-byte
+        await expect(atomicUnitContract.addAtomicUnit("€")).to.not.be.reverted;  // 3-byte
+        await expect(atomicUnitContract.addAtomicUnit("🚀")).to.not.be.reverted; // 4-byte
+
+        // Invalid cases
+        await expect(atomicUnitContract.addAtomicUnit("")).to.be.reverted;       // Empty
+        await expect(atomicUnitContract.addAtomicUnit("ab")).to.be.reverted;     // Multiple chars
+        await expect(atomicUnitContract.addAtomicUnit("\x00")).to.be.reverted;   // Control char
+    });
+
+    it("Should reject invalid UTF-8 first bytes", async function () {
+      const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
+
+      // Invalid 2-byte sequences (first byte wrong)
+      const invalid2Byte = String.fromCharCode(0xE0) + String.fromCharCode(0x80);
+      await expect(atomicUnitContract.addAtomicUnit(invalid2Byte))
+          .to.be.revertedWithCustomError(atomicUnitContract, INVALID_CHARACTER_ERROR);
+
+      // Invalid 3-byte sequences (first byte wrong)
+      const invalid3Byte = String.fromCharCode(0xF0) + String.fromCharCode(0x80) + String.fromCharCode(0x80);
+      await expect(atomicUnitContract.addAtomicUnit(invalid3Byte))
+          .to.be.revertedWithCustomError(atomicUnitContract, INVALID_CHARACTER_ERROR);
+
+      // Invalid 4-byte sequences (first byte wrong)
+      const invalid4Byte = String.fromCharCode(0xF8) + String.fromCharCode(0x80) + String.fromCharCode(0x80) + String.fromCharCode(0x80);
+      await expect(atomicUnitContract.addAtomicUnit(invalid4Byte))
+          .to.be.revertedWithCustomError(atomicUnitContract, INVALID_CHARACTER_ERROR);
+    });
+  });
+
   describe("Gas Optimization", function () {
     it("Should optimize gas usage by avoiding duplicate hashing", async function () {
       const { atomicUnitContract } = await loadFixture(deployAtomicUnitFixture);
