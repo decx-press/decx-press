@@ -59,7 +59,7 @@ describe("AtomicUnit", function () {
       const hash1 = await atomicUnitContract.atomicLookup(CHAR);
 
       // Check that the atomicLookupMapping is not zero for the added character
-      expect(await atomicUnitContract.getAtomicUnitHash(character)).to.not.equal(ethers.ZeroHash);
+      expect(await atomicUnitContract.getAtomicUnitHash(CHAR)).to.not.equal(ethers.ZeroHash);
       expect(hash1).to.not.equal(ethers.ZeroHash); // Ensure the returned hash is also not zero
 
       // Add the same atomic unit again
