@@ -5,10 +5,9 @@ contract AtomicUnit {
     error AtomicUnit_InvalidCharacter();
 
     // mapping of atomic hashes to true
-    mapping(bytes32 => bool) private atomicHashMapping;
-
+    mapping(bytes32 => bool) public atomicHashMapping;
     // mapping of atomic characters to their corresponding hash
-    mapping(string => bytes32) private atomicLookupMapping;
+    mapping(string => bytes32) public atomicLookupMapping;
 
     /**
      *   @dev Add an atomic unit to the contract.

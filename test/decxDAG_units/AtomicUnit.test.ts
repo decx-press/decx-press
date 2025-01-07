@@ -59,6 +59,10 @@ describe("AtomicUnit", function () {
       // Extract the emitted hash
       const hash1 = await atomicUnitContract.atomicLookup(character);
 
+      // Check that the atomicLookupMapping is not zero for the added character
+      expect(await atomicUnitContract.getAtomicUnitHash(character)).to.not.equal(ethers.ZeroHash);
+      expect(hash1).to.not.equal(ethers.ZeroHash); // Ensure the returned hash is also not zero
+
       // Add the same atomic unit again
       await atomicUnitContract.addAtomicUnit(character);
 
@@ -137,7 +141,10 @@ describe("AtomicUnit", function () {
           .to.be.revertedWithCustomError(atomicUnitContract, INVALID_CHARACTER_ERROR);
 
       // Invalid 4-byte sequences (first byte wrong)
-      const invalid4Byte = String.fromCharCode(0xF8) + String.fromCharCode(0x80) + String.fromCharCode(0x80) + String.fromCharCode(0x80);
+      const invalid4Byte = String.fromCharCode(0xF8)
+        + String.fromCharCode(0x80)
+        + String.fromCharCode(0x80)
+        + String.fromCharCode(0x80);
       await expect(atomicUnitContract.addAtomicUnit(invalid4Byte))
           .to.be.revertedWithCustomError(atomicUnitContract, INVALID_CHARACTER_ERROR);
     });
