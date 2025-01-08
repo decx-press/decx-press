@@ -1,6 +1,5 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
-import { keccak256, AbiCoder } from "ethers";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import "@nomicfoundation/hardhat-chai-matchers";
 import { TestUtils } from "../TestUtils";
@@ -160,9 +159,11 @@ describe("AtomicUnit", function () {
       const tx2 = await atomicUnitContract.addAtomicUnit(CHAR);
       const receipt2 = await tx2.wait();
 
-      // uncomment to see the gas used
-      console.log(`-- Gas used for 1st insertion of "${CHAR}": ${receipt1.gasUsed.toString()}`);
-      console.log(`-- Gas used for 2nd insertion of "${CHAR}": ${receipt2.gasUsed.toString()}`);
+      receipt1.operation = `novel hashing of "${CHAR}"`;
+      receipt2.operation = `hashing attempt of "${CHAR}"`;
+
+      // print the gas fees
+      await TestUtils.PrintGasFees([receipt1, receipt2]);
 
       // Confirm no additional storage occurred by ensuring the gas cost is minimal
       expect(receipt2.gasUsed).to.be.lessThan(receipt1.gasUsed);

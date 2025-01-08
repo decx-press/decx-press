@@ -181,12 +181,21 @@ describe("CompositeUnit", function () {
       const tx2 = await compositeUnitContract.addCompositeUnit(atomicHashes);
       const receipt2 = await tx2.wait();
 
-      // uncomment to see the gas used
-      console.log(`-- Gas used for 1st insertion of "${CHAR1}${CHAR2}": ${receipt1.gasUsed.toString()}`);
-      console.log(`-- Gas used for 2nd insertion of "${CHAR1}${CHAR2}": ${receipt2.gasUsed.toString()}`);
+      // assign the same operation to both receipts
+      receipt1.operation = `novel hashing of "${CHAR1}${CHAR2}"`;
+      receipt2.operation = `hashing attempt of "${CHAR1}${CHAR2}"`;
+
+      // print the gas fees
+      await TestUtils.PrintGasFees([receipt1, receipt2]);
 
       // Confirm no additional storage occurred by ensuring the gas cost is minimal
       expect(receipt2.gasUsed).to.be.lessThan(receipt1.gasUsed);
     });
   });
 });
+
+async function getEthPrice() {
+    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+    const data = await response.json();
+    return data.ethereum.usd;
+}
