@@ -40,32 +40,42 @@ export class TestUtils {
     static async PrintGasFees(receipts: any[]) {
         // store these for calculations below
         const ethPrice = await this.GetEthPrice();
-        const gasPrice = await this.GetGasPrice();
+
+        // neatly exit out if we can't get the ETH price so we don't break the test
+        if (!ethPrice) {
+            console.warn("Failed to fetch ETH price, likely due to rate limiting. Try again later.");
+            return;
+        }
+
+        // uncomment to see ETH price
+        // console.log(`ETH price: ${ethPrice}`);
 
         // generate a console table with the gas fees & USD conversion
-        return console.table(receipts.map((receipt, index) => {
+        return console.table(receipts.map((receipt) => {
             // if no operation is given, use a default one
             if (!receipt.operation) {
                 receipt.operation = `no operation given`;
             }
 
-            const gasCost = Number(receipt.gasUsed) * Number(gasPrice.gasPrice);
+            const gasCost = Number(receipt.gasUsed) * Number(receipt.gasPrice);
             const ethCost = ethers.formatEther(gasCost.toString());
             const usdPrice = Number(ethCost) * Number(ethPrice);
 
             return {
-                operation: `#${index + 1} ${receipt.operation}`,
-                "Gas used": receipt.gasUsed.toString(),
-                "USD cost": `$${usdPrice.toFixed(4)}`
+                "Operation": `${receipt.operation}`,
+                "Gas price": receipt.gasPrice.toString(),
+                "Gas fee": receipt.gasUsed.toString(),
+                "In USD": `$${usdPrice.toFixed(4)}`
             };
         }));
     }
 
     /**
-     * Get the current gas price
-     * @returns The current gas price
+     * Get the fee data
+     * @returns The an object with the fee data
+     * https://docs.ethers.org/v5/api/providers/types/#providers-FeeData
      */
-    private static async GetGasPrice() {
+    private static async GetFeeData() {
         return await ethers.provider.getFeeData();
     }
 
@@ -77,7 +87,9 @@ export class TestUtils {
         // use coingecko api for USD price
         const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
         const data = await response.json();
-        return data.ethereum.usd;
+        // conditionally get the price (we may encouner rate limiting)
+        const ethPrice = data.ethereum?.usd;
+        return ethPrice;
     }
 }
 
