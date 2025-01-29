@@ -3,7 +3,10 @@
 
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
+// TODO: does this need to be more built out?
+
 const AtomicUnitModule = buildModule("AtomicUnitModule", (m) => {
+  // Generic deploy - without constructor arguments
   const atomicUnit = m.contract("AtomicUnit", []);
   return { atomicUnit };
 });
