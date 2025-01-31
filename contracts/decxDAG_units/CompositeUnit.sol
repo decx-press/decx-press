@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import "./Character2Hash.sol";
+import "./HashRegistry.sol";
 
 contract CompositeUnit {
-    Character2Hash private Character2HashContract;
+    HashRegistry private hashRegistryContract;
+
     error CompositeUnit_InvalidArgs();
     error CompositeUnit_InvalidHash();
 
@@ -14,8 +15,8 @@ contract CompositeUnit {
     // mappings of atomic hashes to composite hashes
     mapping(bytes32 => mapping(bytes32 => bytes32)) private compositeHashPairs;
 
-    constructor(address _Character2HashAddress) {
-        Character2HashContract = Character2Hash(_Character2HashAddress);
+    constructor(address _hashRegistryAddress) {
+        hashRegistryContract = HashRegistry(_hashRegistryAddress);
     }
 
     function addCompositeUnit(bytes32[] memory hashArray) public returns (bytes32) {
@@ -25,8 +26,8 @@ contract CompositeUnit {
         }
 
         // ensure both the atomic units exist before proceeding
-        if (!Character2HashContract.isCharacter2HashPresent(hashArray[0]) ||
-            !Character2HashContract.isCharacter2HashPresent(hashArray[1])) {
+        if (!hashRegistryContract.isHashPresent(hashArray[0]) ||
+            !hashRegistryContract.isHashPresent(hashArray[1])) {
             revert CompositeUnit_InvalidHash();
         }
 

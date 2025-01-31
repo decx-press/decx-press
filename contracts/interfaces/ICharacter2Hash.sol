@@ -21,7 +21,7 @@ interface ICharacter2Hash {
         @param character The character to get the hash of.
         @return The hash of the character.
     */
-    function getCharacter2HashHash(string memory character) external view returns (bytes32);
+    function getHashForCharacter(string memory character) external view returns (bytes32);
 
     /**
         @dev Get the hash of an atomic unit.

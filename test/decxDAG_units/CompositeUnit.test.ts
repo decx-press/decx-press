@@ -45,8 +45,8 @@ describe("CompositeUnit", function () {
       await Character2HashContract.addCharacter2Hash(CHAR2);
 
       // Get the actual atomic unit hashes
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
-      const atomicHash2 = await Character2HashContract.getCharacter2HashHash(CHAR2);
+      const atomicHash1 = await Character2HashContract.getHashForCharacter(CHAR1);
+      const atomicHash2 = await Character2HashContract.getHashForCharacter(CHAR2);
       const atomicHashes = [atomicHash1, atomicHash2];
 
       // Add the composite unit and wait for the transaction
@@ -68,9 +68,9 @@ describe("CompositeUnit", function () {
       await Character2HashContract.addCharacter2Hash(CHAR1);
       await Character2HashContract.addCharacter2Hash(CHAR2);
 
-      // Get the actual atomic unit hashes using getCharacter2HashHash
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
-      const atomicHash2 = await Character2HashContract.getCharacter2HashHash(CHAR2);
+      // Get the actual atomic unit hashes using getHashForCharacter
+      const atomicHash1 = await Character2HashContract.getHashForCharacter(CHAR1);
+      const atomicHash2 = await Character2HashContract.getHashForCharacter(CHAR2);
       const atomicHashes = [atomicHash1, atomicHash2];
 
       // Add the first composite unit
@@ -96,9 +96,9 @@ describe("CompositeUnit", function () {
       await Character2HashContract.addCharacter2Hash(CHAR1);
       await Character2HashContract.addCharacter2Hash(CHAR2);
 
-      // Get the actual atomic unit hashes using getCharacter2HashHash
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
-      const atomicHash2 = await Character2HashContract.getCharacter2HashHash(CHAR2);
+      // Get the actual atomic unit hashes using getHashForCharacter
+      const atomicHash1 = await Character2HashContract.getHashForCharacter(CHAR1);
+      const atomicHash2 = await Character2HashContract.getHashForCharacter(CHAR2);
 
       const invalidHashes1 = [atomicHash1, atomicHash2, atomicHash1];
       await expect(compositeUnitContract.addCompositeUnit(invalidHashes1)).to.be.revertedWithCustomError(
@@ -112,7 +112,7 @@ describe("CompositeUnit", function () {
 
       // First add the atomic unit
       await Character2HashContract.addCharacter2Hash(CHAR1);
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
+      const atomicHash1 = await Character2HashContract.getHashForCharacter(CHAR1);
 
       // Create a fake hash that's the right format but not registered in Character2Hash
       const fakeHash = "0x" + "1".repeat(64);  // Creates a valid bytes32 hex string
@@ -150,7 +150,7 @@ describe("CompositeUnit", function () {
       const { Character2HashContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
 
       await Character2HashContract.addCharacter2Hash(CHAR1);
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
+      const atomicHash1 = await Character2HashContract.getHashForCharacter(CHAR1);
 
       // Try with just one hash
       await expect(compositeUnitContract.addCompositeUnit([atomicHash1])).to.be.revertedWithCustomError(
@@ -168,9 +168,9 @@ describe("CompositeUnit", function () {
       await Character2HashContract.addCharacter2Hash(CHAR1);
       await Character2HashContract.addCharacter2Hash(CHAR2);
 
-      // Get the actual atomic unit hashes using getCharacter2HashHash
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
-      const atomicHash2 = await Character2HashContract.getCharacter2HashHash(CHAR2);
+      // Get the actual atomic unit hashes using getHashForCharacter
+      const atomicHash1 = await Character2HashContract.getHashForCharacter(CHAR1);
+      const atomicHash2 = await Character2HashContract.getHashForCharacter(CHAR2);
       const atomicHashes = [atomicHash1, atomicHash2];
 
       // Add a composite unit

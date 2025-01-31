@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
+import "./HashRegistry.sol";
+
 contract Character2Hash {
     error Character2Hash_InvalidCharacter();
 
-    // mapping of atomic hashes to true
-    mapping(bytes32 => bool) public atomicHashMapping;
-    // mapping of atomic characters to their corresponding hash
-    mapping(string => bytes32) public atomicLookupMapping;
+    HashRegistry private hashRegistry; // Declare the HashRegistry contract
+
+    constructor(address _hashRegistryAddress) {
+        hashRegistry = HashRegistry(_hashRegistryAddress); // Initialize it in the constructor
+    }
 
     /**
      *   @dev Add an atomic unit to the contract.
@@ -20,46 +23,10 @@ contract Character2Hash {
             revert Character2Hash_InvalidCharacter();
         }
 
-        // first check if the character is already in the contract
-        if (atomicLookupMapping[character] != bytes32(0)) {
-            return atomicLookupMapping[character];
-        }
-
-        // hash the encoded character using keccak256
-        bytes32 hash = keccak256(abi.encode((character)));
-
-        // add the hash to the hash & lookup mappings
-        atomicHashMapping[hash] = true;
-        atomicLookupMapping[character] = hash;
+        // call HashRegistry.addCharacterHash(character)
+        bytes32 hash = hashRegistry.addCharacterHash(character);
 
         return hash;
-    }
-
-    /**
-     *  @dev Check if an atomic unit is present in the contract.
-     *   @param hash The hash of the atomic unit to check.
-     *   @return True if the atomic unit is present, false otherwise.
-    */
-    function isCharacter2HashPresent(bytes32 hash) public view returns (bool) {
-        return atomicHashMapping[hash];
-    }
-
-    /**
-     *  @dev Get the hash of an atomic unit.
-     *  @param character The character to get the hash of.
-     *  @return The hash of the character.
-     */
-    function getCharacter2HashHash(string memory character) public view returns (bytes32) {
-        return atomicLookupMapping[character];
-    }
-
-    /**
-     *  @dev Get the hash of an atomic unit.
-     *  @param character The character to get the hash of.
-     *  @return The hash of the character.
-    */
-    function atomicLookup(string memory character) public view returns (bytes32) {
-        return atomicLookupMapping[character];
     }
 
     /**

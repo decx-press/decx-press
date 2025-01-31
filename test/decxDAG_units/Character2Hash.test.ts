@@ -44,7 +44,7 @@ describe("Character2Hash", function () {
       expect(exists).to.be.true;
 
       // Check reverse lookup
-      const storedHash = await Character2HashContract.getCharacter2HashHash(CHAR);
+      const storedHash = await Character2HashContract.getHashForCharacter(CHAR);
       expect(storedHash).to.equal(hash);
     });
 
@@ -58,7 +58,7 @@ describe("Character2Hash", function () {
       const hash1 = await Character2HashContract.atomicLookup(CHAR);
 
       // Check that the atomicLookupMapping is not zero for the added character
-      expect(await Character2HashContract.getCharacter2HashHash(CHAR)).to.not.equal(ethers.ZeroHash);
+      expect(await Character2HashContract.getHashForCharacter(CHAR)).to.not.equal(ethers.ZeroHash);
       expect(hash1).to.not.equal(ethers.ZeroHash); // Ensure the returned hash is also not zero
 
       // Add the same atomic unit again
