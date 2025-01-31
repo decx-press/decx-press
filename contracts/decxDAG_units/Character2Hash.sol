@@ -9,7 +9,7 @@ contract Character2Hash {
     HashRegistry private hashRegistry; // Declare the HashRegistry contract
 
     constructor(address _hashRegistryAddress) {
-        hashRegistry = HashRegistry(_hashRegistryAddress); // Initialize it in the constructor
+        hashRegistry = HashRegistry(_hashRegistryAddress);
     }
 
     /**

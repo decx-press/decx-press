@@ -7,7 +7,7 @@ interface IHashRegistry {
         @param character The UTF character to add to the contract.
         @return The hash of the character.
     */
-    function addCharacterHash(string memory character, bytes32 hash) external returns (bytes32);
+    function addCharacterHash(string memory character) external returns (bytes32);
 
     /**
         @dev Check if a hash is present in the contract.
