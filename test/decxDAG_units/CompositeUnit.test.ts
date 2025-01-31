@@ -15,16 +15,19 @@ const CHAR2 = "b";
 describe("CompositeUnit", function () {
   // Define a fixture for consistent setup across tests
   async function deployCompositeUnitFixture() {
+    // First deploy HashRegistry
+    const HashRegistry = await ethers.getContractFactory("HashRegistry");
+    const hashRegistryContract = await HashRegistry.deploy();
 
-    // First deploy Character2Hash
+    // Then deploy Character2Hash
     const Character2Hash = await ethers.getContractFactory("Character2Hash");
-    const Character2HashContract = await Character2Hash.deploy();
+    const character2HashContract = await Character2Hash.deploy(hashRegistryContract.target);
 
-    // Then deploy CompositeUnit with Character2Hash's address
+    // Then deploy CompositeUnit with HashRegistry's address
     const CompositeUnit = await ethers.getContractFactory("CompositeUnit");
-    const compositeUnitContract = await CompositeUnit.deploy(Character2HashContract.target);
+    const compositeUnitContract = await CompositeUnit.deploy(hashRegistryContract.target);
 
-    return { Character2HashContract, compositeUnitContract };
+    return { hashRegistryContract, character2HashContract, compositeUnitContract };
   }
 
   describe("Deployment", function () {
@@ -38,18 +41,21 @@ describe("CompositeUnit", function () {
 
   describe("Storage and Lookup", function () {
     it("Should store two novel UTF characters as a Composite Unit", async function () {
-      const { Character2HashContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
+      const { hashRegistryContract, character2HashContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
 
       // Add atomic units and get their hashes
-      await Character2HashContract.addCharacter2Hash(CHAR1);
-      await Character2HashContract.addCharacter2Hash(CHAR2);
+      await character2HashContract.addCharacter2Hash(CHAR1);
+      await character2HashContract.addCharacter2Hash(CHAR2);
 
       // Get the actual atomic unit hashes
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
-      const atomicHash2 = await Character2HashContract.getCharacter2HashHash(CHAR2);
-      const atomicHashes = [atomicHash1, atomicHash2];
+      const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
+      const atomicHash2 = await hashRegistryContract.getHashForCharacter(CHAR2);
+      // ensure the hashes are present in the hash registry
+      expect(await hashRegistryContract.isHashPresent(atomicHash1)).to.be.true;
+      expect(await hashRegistryContract.isHashPresent(atomicHash2)).to.be.true;
 
       // Add the composite unit and wait for the transaction
+      const atomicHashes = [atomicHash1, atomicHash2];
       const tx = await compositeUnitContract.addCompositeUnit(atomicHashes);
       await tx.wait();
 
@@ -62,15 +68,18 @@ describe("CompositeUnit", function () {
     });
 
     it("Should return the existing hash for duplicate Composite Units", async function () {
-      const { Character2HashContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
+      const { hashRegistryContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
 
       // Add atomic units and get their hashes
-      await Character2HashContract.addCharacter2Hash(CHAR1);
-      await Character2HashContract.addCharacter2Hash(CHAR2);
+      await hashRegistryContract.addCharacterHash(CHAR1);
+      await hashRegistryContract.addCharacterHash(CHAR2);
 
-      // Get the actual atomic unit hashes using getCharacter2HashHash
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
-      const atomicHash2 = await Character2HashContract.getCharacter2HashHash(CHAR2);
+      // Get the actual atomic unit hashes using getHas
+      const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
+      const atomicHash2 = await hashRegistryContract.getHashForCharacter(CHAR2);
+      expect(await hashRegistryContract.isHashPresent(atomicHash1)).to.be.true;
+      expect(await hashRegistryContract.isHashPresent(atomicHash2)).to.be.true;
+
       const atomicHashes = [atomicHash1, atomicHash2];
 
       // Add the first composite unit
@@ -90,15 +99,15 @@ describe("CompositeUnit", function () {
     });
 
     it("Should ensure that the input is an array of two hashes", async function () {
-      const { Character2HashContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
+      const { hashRegistryContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
 
       // Add atomic units and get their hashes
-      await Character2HashContract.addCharacter2Hash(CHAR1);
-      await Character2HashContract.addCharacter2Hash(CHAR2);
+      await hashRegistryContract.addCharacterHash(CHAR1);
+      await hashRegistryContract.addCharacterHash(CHAR2);
 
-      // Get the actual atomic unit hashes using getCharacter2HashHash
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
-      const atomicHash2 = await Character2HashContract.getCharacter2HashHash(CHAR2);
+      // Get the actual atomic unit hashes using getHas
+      const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
+      const atomicHash2 = await hashRegistryContract.getHashForCharacter(CHAR2);
 
       const invalidHashes1 = [atomicHash1, atomicHash2, atomicHash1];
       await expect(compositeUnitContract.addCompositeUnit(invalidHashes1)).to.be.revertedWithCustomError(
@@ -108,11 +117,11 @@ describe("CompositeUnit", function () {
     });
 
     it("Should not allow invalid hash pairs", async function () {
-      const { Character2HashContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
+      const { hashRegistryContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
 
       // First add the atomic unit
-      await Character2HashContract.addCharacter2Hash(CHAR1);
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
+      await hashRegistryContract.addCharacterHash(CHAR1);
+      const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
 
       // Create a fake hash that's the right format but not registered in Character2Hash
       const fakeHash = "0x" + "1".repeat(64);  // Creates a valid bytes32 hex string
@@ -147,10 +156,10 @@ describe("CompositeUnit", function () {
     });
 
     it("Should reject single hash input", async function () {
-      const { Character2HashContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
+      const { hashRegistryContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
 
-      await Character2HashContract.addCharacter2Hash(CHAR1);
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
+      await hashRegistryContract.addCharacterHash(CHAR1);
+      const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
 
       // Try with just one hash
       await expect(compositeUnitContract.addCompositeUnit([atomicHash1])).to.be.revertedWithCustomError(
@@ -162,15 +171,15 @@ describe("CompositeUnit", function () {
 
   describe("Gas Optimization", function () {
     it("Should optimize gas usage by avoiding duplicate hashing", async function () {
-      const { Character2HashContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
+      const { hashRegistryContract, character2HashContract, compositeUnitContract } = await loadFixture(deployCompositeUnitFixture);
 
       // Add atomic units and get their hashes
-      await Character2HashContract.addCharacter2Hash(CHAR1);
-      await Character2HashContract.addCharacter2Hash(CHAR2);
+      await hashRegistryContract.addCharacterHash(CHAR1);
+      await hashRegistryContract.addCharacterHash(CHAR2);
 
-      // Get the actual atomic unit hashes using getCharacter2HashHash
-      const atomicHash1 = await Character2HashContract.getCharacter2HashHash(CHAR1);
-      const atomicHash2 = await Character2HashContract.getCharacter2HashHash(CHAR2);
+      // Get the actual atomic unit hashes using getHashForCharacter
+      const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
+      const atomicHash2 = await hashRegistryContract.getHashForCharacter(CHAR2);
       const atomicHashes = [atomicHash1, atomicHash2];
 
       // Add a composite unit
