@@ -8,15 +8,15 @@ export class TestUtils {
      * Generate a random string of a given length
      * @param length - The length of the string to generate
      * @returns The generated string
-     */ 
+     */
     static GenerateRandomString(length: number) {
         return Math.random().toString(36).substring(2, length + 2);
     }
 
     /**
-     * Generate an Atomic Unit from a string
+     * Generate a Character2Hash unit from a string
      * @param str - The single character to generate an hash from
-     * @returns The encoded Atomic Unit
+     * @returns The encoded Character2Hash Unit
      */
     static GenerateHashFromChar(str: string) {
         // NOTE:this may not be the same as the way solidity does it so beware!
@@ -24,7 +24,7 @@ export class TestUtils {
     }
 
     /**
-     * Generate a Composite Unit from two Atomic Units
+     * Generate a Composite Unit from two Character2Hash Units
      * @param hashes - An array arbitrary keccak256 hashes
      * @returns The encoded Composite Unit
      */

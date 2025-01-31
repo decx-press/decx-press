@@ -20,12 +20,12 @@ contract CompositeUnit {
     }
 
     function addCompositeUnit(bytes32[] memory hashArray) public returns (bytes32) {
-        // first check if there are only two atomic units
+        // first check if there are only two Character2Hash units
         if (hashArray.length != 2) {
             revert CompositeUnit_InvalidArgs();
         }
 
-        // ensure both the atomic units exist before proceeding
+        // ensure both the Character2Hash units exist before proceeding
         if (!hashRegistryContract.isHashPresent(hashArray[0]) ||
             !hashRegistryContract.isHashPresent(hashArray[1])) {
             revert CompositeUnit_InvalidHash();

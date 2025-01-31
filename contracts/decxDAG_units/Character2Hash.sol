@@ -13,7 +13,7 @@ contract Character2Hash {
     }
 
     /**
-     *   @dev Add an atomic unit to the contract.
+     *   @dev Add a Character2Hash unit to the contract.
      *   @param character The UTF character to add to the contract.
      *   @return The hash of the character.
     */
@@ -23,7 +23,7 @@ contract Character2Hash {
             revert Character2Hash_InvalidCharacter();
         }
 
-        // call HashRegistry.addCharacterHash(character)
+        // use the hash registry to add the character and get the hash
         bytes32 hash = hashRegistry.addCharacterHash(character);
 
         return hash;

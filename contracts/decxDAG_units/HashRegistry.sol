@@ -6,8 +6,8 @@ contract HashRegistry {
     mapping(string => bytes32) public character2HashLookup;
 
     /**
-        @dev Add an atomic unit to the contract.
-        @param character The UTF character to add to the contract.
+        @dev Hash a character and add it to the hash registry.
+        @param character The UTF character to hash.
         @return The hash of the character.
     */
     function addCharacterHash(string memory character) public returns (bytes32) {

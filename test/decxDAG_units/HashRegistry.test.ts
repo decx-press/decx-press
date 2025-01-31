@@ -7,7 +7,6 @@ import { TestUtils } from "../TestUtils";
 // Use a single character string for testing
 const CHAR = "a";
 
-
 describe("HashRegistry", function () {
   // Define a fixture for consistent setup across tests
   async function deployHashRegistryFixture() {
@@ -32,7 +31,7 @@ describe("HashRegistry", function () {
         const { hashRegistryContract } = await loadFixture(deployHashRegistryFixture);
         const hash = TestUtils.GenerateHashFromChar(CHAR);
 
-        // Add the atomic unit
+        // Add the Character2Hash unit
         await hashRegistryContract.addCharacterHash(CHAR);
 
         // Check that the hash exists
@@ -44,10 +43,10 @@ describe("HashRegistry", function () {
         expect(storedHash).to.equal(hash);
       });
 
-      it("Should return the existing hash for duplicate Atomic Units", async function () {
+      it("Should return the existing hash for duplicate Character2Hash Units", async function () {
         const { hashRegistryContract } = await loadFixture(deployHashRegistryFixture);
 
-        // Add the first atomic unit
+        // Add the first Character2Hash unit
         await hashRegistryContract.addCharacterHash(CHAR);
 
         // Extract the emitted hash
@@ -57,7 +56,7 @@ describe("HashRegistry", function () {
         expect(await hashRegistryContract.getHashForCharacter(CHAR)).to.not.equal(ethers.ZeroHash);
         expect(hash1).to.not.equal(ethers.ZeroHash); // Ensure the returned hash is also not zero
 
-        // Add the same atomic unit again
+        // Add the same Character2Hash unit again
         await hashRegistryContract.addCharacterHash(CHAR);
 
         // Extract the returned hash

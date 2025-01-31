@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 interface ICharacter2Hash {
     /**
-        @dev Add an atomic unit to the contract.
+        @dev Add a Character2Hash unit to the contract.
         @param character The UTF character to add to the contract.
         @return The hash of the character.
     */

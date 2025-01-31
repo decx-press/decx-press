@@ -115,10 +115,10 @@ describe("Character2Hash", function () {
     it("Should optimize gas usage by avoiding duplicate hashing", async function () {
       const { character2HashContract } = await loadFixture(deployCharacter2HashFixture);
 
-      // Add the first atomic unit
+      // Add the first Character2Hash unit
       const tx1 = await character2HashContract.addCharacter2Hash(CHAR);
       const receipt1 = await tx1.wait();
-      // Add the same atomic unit again
+      // Add the same Character2Hash unit again
       const tx2 = await character2HashContract.addCharacter2Hash(CHAR);
       const receipt2 = await tx2.wait();
 
