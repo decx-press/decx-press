@@ -3,9 +3,9 @@
 
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
-const CompositeUnitModule = buildModule("CompositeUnitModule", (m) => {
-  const compositeUnit = m.contract("CompositeUnit", []);
-  return { compositeUnit };
+const Hashes2HashModule = buildModule("Hashes2HashModule", (m) => {
+  const Hashes2Hash = m.contract("Hashes2Hash", []);
+  return { Hashes2Hash };
 });
 
-export default CompositeUnitModule;
+export default Hashes2HashModule;
