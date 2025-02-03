@@ -10,6 +10,7 @@ contract HashRegistry {
         @param character The UTF character to hash.
         @return The hash of the character.
     */
+
     function addCharacterHash(string memory character) public returns (bytes32) {
         // first check if the character is already in the contract
         if (character2HashLookup[character] != bytes32(0)) {
