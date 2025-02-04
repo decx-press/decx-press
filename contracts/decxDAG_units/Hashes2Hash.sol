@@ -13,14 +13,17 @@ contract Hashes2Hash{
     // mappings of composite hashes to true
     mapping(bytes32 => bool) private Hash2HashesExists;
     // mappings of atomic hashes to composite hashes
-    mapping(bytes32 => mapping(bytes32 => bytes32)) private compositeHashPairs;
+    mapping(bytes32 => mapping(bytes32 => bytes32)) private Hash2HashesLookup;
 
     constructor(address _hashRegistryAddress) {
         hashRegistryContract = HashRegistry(_hashRegistryAddress);
     }
 
     function addHashes2Hash(bytes32[] memory hashArray) public returns (bytes32) {
-
+       
+        if (hashArray.length != 2) {
+            revert Hashes2Hash_InvalidArgs();
+        }
         // ensure both the Character2Hash units exist before proceeding
         if (!hashRegistryContract.isHashPresent(hashArray[0]) ||
             !hashRegistryContract.isHashPresent(hashArray[1])) {
@@ -29,7 +32,7 @@ contract Hashes2Hash{
 
         // check if the hash pair already exists
         if (isHashPairPresent(hashArray[0], hashArray[1])) {
-            return compositeHashPairs[hashArray[0]][hashArray[1]];
+            return Hash2HashesLookup[hashArray[0]][hashArray[1]];
         }
 
         // generate the composite hash
@@ -37,7 +40,7 @@ contract Hashes2Hash{
         // store the composite hash
         Hash2HashesExists[compositeHash] = true;
         // store the explicit hash pair
-        compositeHashPairs[hashArray[0]][hashArray[1]] = compositeHash;
+        Hash2HashesLookup[hashArray[0]][hashArray[1]] = compositeHash;
 
         // return the composite hash
         return compositeHash;
@@ -48,10 +51,10 @@ contract Hashes2Hash{
     }
 
     function isHashPairPresent(bytes32 hashA, bytes32 hashB) public view returns (bool) {
-        return compositeHashPairs[hashA][hashB] != bytes32(0);
+        return Hash2HashesLookup[hashA][hashB] != bytes32(0);
     }
 
     function getCompositeHash(bytes32 hashA, bytes32 hashB) public view returns (bytes32) {
-        return compositeHashPairs[hashA][hashB];
+        return Hash2HashesLookup[hashA][hashB];
     }
 }
