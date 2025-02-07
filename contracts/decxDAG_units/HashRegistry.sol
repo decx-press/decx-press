@@ -40,8 +40,8 @@ contract HashRegistry {
         @param hash2 The second hash.
         @return The composite hash of the two hashes.
     */
-    function addCompositeHash(bytes32 hash1, bytes32 hash2) public returns (bytes32) {
-        
+    function addHashesHash(bytes32 hash1, bytes32 hash2) public returns (bytes32) {
+
         // ensure both the Character2Hash units exist before proceeding
         if (!isHashPresent(hash1) || !isHashPresent(hash2)) {
             revert HashRegistry_InvalidHash();
@@ -52,14 +52,14 @@ contract HashRegistry {
             return Hashes2HashLookup[hash1][hash2];
         }
         // combine the two hashes using keccak256
-        bytes32 compositeHash = keccak256(abi.encode(hash1, hash2));
+        bytes32 hashesHash = keccak256(abi.encode(hash1, hash2));
 
         // add the composite hash to the hash & lookup mappings
-        hashExists[compositeHash] = true;
-        Hashes2HashLookup[hash1][hash2] = compositeHash;
+        hashExists[hashesHash] = true;
+        Hashes2HashLookup[hash1][hash2] = hashesHash;
 
         // return the computed composite hash
-        return compositeHash;
+        return hashesHash;
     }
     /**
         @dev Check if a hash is present in the contract.
@@ -80,12 +80,12 @@ contract HashRegistry {
     }
 
     /**
-        @dev Get the composite hash for two hashes.
+        @dev Get the hash for two hashes.
         @param hash1 The first hash.
         @param hash2 The second hash.
-        @return The composite hash of the two hashes.
+        @return The hash of the two hashes.
     */
-    function getCompositeHash(bytes32 hash1, bytes32 hash2) public view returns (bytes32) {
+    function getHashForHashes(bytes32 hash1, bytes32 hash2) public view returns (bytes32) {
         return Hashes2HashLookup[hash1][hash2];
     }
 }

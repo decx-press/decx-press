@@ -18,20 +18,20 @@ describe("Hashes2Hash", function () {
     const HashRegistry = await ethers.getContractFactory("HashRegistry");
     const hashRegistryContract = await HashRegistry.deploy();
 
-    // Then deploy Character2Hash
-    const Character2Hash = await ethers.getContractFactory("Character2Hash");
-    const character2HashContract = await Character2Hash.deploy(hashRegistryContract.target);
-
     // Then deploy Hashes2Hash with HashRegistry's address
     const Hashes2Hash = await ethers.getContractFactory("Hashes2Hash");
-    const Hashes2HashContract = await Hashes2Hash.deploy(hashRegistryContract.target);
+    const Hashes2HashContract = await Hashes2Hash.deploy(
+      hashRegistryContract.target
+    );
 
-    return { hashRegistryContract, character2HashContract, Hashes2HashContract };
+    return { hashRegistryContract, Hashes2HashContract };
   }
 
   describe("Deployment", function () {
     it("Should deploy successfully", async function () {
-      const { Hashes2HashContract } = await loadFixture(deployHashes2HashFixture);
+      const { Hashes2HashContract } = await loadFixture(
+        deployHashes2HashFixture
+      );
 
       // Check that the contract has a valid address
       expect(Hashes2HashContract.target).to.be.properAddress;
@@ -39,9 +39,10 @@ describe("Hashes2Hash", function () {
   });
 
   describe("Storage and Lookup", function () {
-
     it("Should ensure that the input is an array of two hashes", async function () {
-      const { hashRegistryContract, Hashes2HashContract } = await loadFixture(deployHashes2HashFixture);
+      const { hashRegistryContract, Hashes2HashContract } = await loadFixture(
+        deployHashes2HashFixture
+      );
 
       // Add Character2Hash units and get their hashes
       await hashRegistryContract.addCharacterHash(CHAR1);
@@ -52,40 +53,81 @@ describe("Hashes2Hash", function () {
       const atomicHash2 = await hashRegistryContract.getHashForCharacter(CHAR2);
 
       const invalidHashes1 = [atomicHash1, atomicHash2, atomicHash1];
-      await expect(Hashes2HashContract.addHashes2Hash(invalidHashes1)).to.be.revertedWithCustomError(
-        Hashes2HashContract,
-        INVALID_ARGS_ERROR
-      );
+      await expect(
+        Hashes2HashContract.addHashes2Hash(invalidHashes1)
+      ).to.be.revertedWithCustomError(Hashes2HashContract, INVALID_ARGS_ERROR);
     });
 
-
     it("Should handle empty array input", async function () {
-      const { Hashes2HashContract } = await loadFixture(deployHashes2HashFixture);
+      const { Hashes2HashContract } = await loadFixture(
+        deployHashes2HashFixture
+      );
 
       const emptyArray: string[] = [];
-      await expect(Hashes2HashContract.addHashes2Hash(emptyArray)).to.be.revertedWithCustomError(
-        Hashes2HashContract,
-        INVALID_ARGS_ERROR
-      );
+      await expect(
+        Hashes2HashContract.addHashes2Hash(emptyArray)
+      ).to.be.revertedWithCustomError(Hashes2HashContract, INVALID_ARGS_ERROR);
     });
 
     it("Should reject single hash input", async function () {
-      const { hashRegistryContract, Hashes2HashContract } = await loadFixture(deployHashes2HashFixture);
+      const { hashRegistryContract, Hashes2HashContract } = await loadFixture(
+        deployHashes2HashFixture
+      );
 
       await hashRegistryContract.addCharacterHash(CHAR1);
       const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
 
       // Try with just one hash
-      await expect(Hashes2HashContract.addHashes2Hash([atomicHash1])).to.be.revertedWithCustomError(
-        Hashes2HashContract,
-        INVALID_ARGS_ERROR
+      await expect(
+        Hashes2HashContract.addHashes2Hash([atomicHash1])
+      ).to.be.revertedWithCustomError(Hashes2HashContract, INVALID_ARGS_ERROR);
+    });
+
+    it("Should store two hashes in the hash registry", async function () {
+      const { hashRegistryContract, Hashes2HashContract } = await loadFixture(
+        deployHashes2HashFixture
       );
+
+      // Add Character2Hash units and get their hashes
+      await hashRegistryContract.addCharacterHash(CHAR1);
+      await hashRegistryContract.addCharacterHash(CHAR2);
+
+      // Get the hashes
+      const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
+      const atomicHash2 = await hashRegistryContract.getHashForCharacter(CHAR2);
+
+      // ensure the hashes are present in the hash registry
+      expect(await hashRegistryContract.isHashPresent(atomicHash1)).to.be.true;
+      expect(await hashRegistryContract.isHashPresent(atomicHash2)).to.be.true;
+
+      // Add the it to the hashes2hash and wait for the transaction
+      const atomicHashes = [atomicHash1, atomicHash2];
+      const tx = await Hashes2HashContract.addHashes2Hash(atomicHashes);
+      await tx.wait();
+
+      // Get the hash from the hash registry
+      const generatedHash = await hashRegistryContract.getHashForHashes(
+        atomicHash1,
+        atomicHash2
+      );
+
+      // Calculate the expected hash the same way the contract does
+      const expectedHash = TestUtils.GenerateHashFromHashes(atomicHashes);
+
+      // Check that the hash is the same as the expected hash
+      expect(generatedHash).to.equal(expectedHash);
+
+      // Check that the hash exists
+      const exists = await hashRegistryContract.isHashPresent(expectedHash);
+      expect(exists).to.be.true;
     });
   });
 
   describe("Gas Optimization", function () {
     it("Should optimize gas usage by avoiding duplicate hashing", async function () {
-      const { hashRegistryContract, character2HashContract, Hashes2HashContract } = await loadFixture(deployHashes2HashFixture);
+      const { hashRegistryContract, Hashes2HashContract } = await loadFixture(
+        deployHashes2HashFixture
+      );
 
       // Add Character2Hash units and get their hashes
       await hashRegistryContract.addCharacterHash(CHAR1);
@@ -116,9 +158,3 @@ describe("Hashes2Hash", function () {
     });
   });
 });
-
-async function getEthPrice() {
-    const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-    const data = await response.json();
-    return data.ethereum.usd;
-}
