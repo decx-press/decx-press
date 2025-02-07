@@ -10,6 +10,14 @@ interface IHashRegistry {
     function addCharacterHash(string memory character) external returns (bytes32);
 
     /**
+        @dev Combine two hashes and add the composite hash to the hash registry.
+        @param hash1 The first hash.
+        @param hash2 The second hash.
+        @return The composite hash of the two hashes.
+    */
+    function addCompositeHash(bytes32 hash1, bytes32 hash2) external returns (bytes32);
+
+    /**
         @dev Check if a hash is present in the contract.
         @param hash The hash to check.
         @return True if the hash is present, false otherwise.
@@ -22,4 +30,12 @@ interface IHashRegistry {
         @return The hash of the character.
     */
     function getHashForCharacter(string memory character) external returns (bytes32);
+    
+    /**
+        @dev Get the composite hash for two hashes.
+        @param hash1 The first hash.
+        @param hash2 The second hash.
+        @return The composite hash of the two hashes.
+    */
+    function getCompositeHash(bytes32 hash1, bytes32 hash2) external view returns (bytes32);
 }

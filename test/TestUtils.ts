@@ -24,9 +24,9 @@ export class TestUtils {
     }
 
     /**
-     * Generate a Composite Unit from two Character2Hash Units
+     * Generate a Hashes2Hash Unit from two Character2Hash Units
      * @param hashes - An array arbitrary keccak256 hashes
-     * @returns The encoded Composite Unit
+     * @returns The encoded Hashes2Hash Unit
      */
     static GenerateHashFromHashes(hashes: string[]) {
         return keccak256(AbiCoder.defaultAbiCoder().encode(["bytes32[]"], [hashes]));
