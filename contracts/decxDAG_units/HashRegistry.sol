@@ -16,7 +16,6 @@ contract HashRegistry {
         @param character The UTF character to hash.
         @return The hash of the character.
     */
-
     function addCharacterHash(string memory character) public returns (bytes32) {
         // first check if the character is already in the contract
         if (character2HashLookup[character] != bytes32(0)) {
@@ -61,6 +60,7 @@ contract HashRegistry {
         // return the computed composite hash
         return hashesHash;
     }
+
     /**
         @dev Check if a hash is present in the contract.
         @param hash The hash to check.
