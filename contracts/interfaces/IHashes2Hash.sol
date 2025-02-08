@@ -7,7 +7,5 @@ interface IHashes2Hash {
         @param hashArray An array of arbitrary hashes.
         @return The hash of the hashes2hash.
     */
-    function addHashes2Hash(
-        bytes32[] memory hashArray
-    ) external returns (bytes32);
+    function addHashes2Hash(bytes32[] memory hashArray) external returns (bytes32);
 }

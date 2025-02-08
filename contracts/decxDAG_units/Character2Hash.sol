@@ -17,9 +17,7 @@ contract Character2Hash {
      *   @param character The UTF character to add to the contract.
      *   @return The hash of the character.
      */
-    function addCharacter2Hash(
-        string memory character
-    ) public returns (bytes32) {
+    function addCharacter2Hash(string memory character) public returns (bytes32) {
         // first check if the character is valid
         if (!isCharacterValid(character)) {
             revert Character2Hash_InvalidCharacter();
@@ -36,9 +34,7 @@ contract Character2Hash {
      *  @param character The character to check.
      *  @return True if the character is valid, false otherwise.
      */
-    function isCharacterValid(
-        string memory character
-    ) private pure returns (bool) {
+    function isCharacterValid(string memory character) private pure returns (bool) {
         bytes memory b = bytes(character);
         uint256 l = b.length;
 

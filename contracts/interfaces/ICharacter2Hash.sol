@@ -7,7 +7,5 @@ interface ICharacter2Hash {
         @param character The UTF character to add to the contract.
         @return The hash of the character.
     */
-    function addCharacter2Hash(
-        string memory character
-    ) external returns (bytes32);
+    function addCharacter2Hash(string memory character) external returns (bytes32);
 }
