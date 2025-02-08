@@ -16,6 +16,14 @@
     "node": "hardhat node",
     "format": "prettier --write . --ignore-path .gitignore"
   },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "**/*.{js,ts,jsx,tsx,json,css,md,yml,yaml}": "prettier --write"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/decx-press/decx-press.git"
@@ -33,6 +41,8 @@
   "homepage": "https://github.com/decx-press/decx-press#readme",
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.17"
+    "hardhat": "^2.22.17",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.4.3"
   }
 }
