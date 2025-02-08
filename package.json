@@ -14,7 +14,7 @@
     "coverage": "hardhat coverage",
     "console": "hardhat console --network localhost",
     "node": "hardhat node",
-    "format": "prettier . --write --ignore-path .gitignore",
+    "format": "prettier . --write",
     "lint-staged": "lint-staged",
     "prepare": "husky"
   },
@@ -48,6 +48,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.4.3",
     "prettier": "^3.4.2",
+    "prettier-plugin-solidity": "^1.4.2",
     "solidity-coverage": "^0.8.14"
   }
 }
