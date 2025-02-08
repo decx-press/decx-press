@@ -13,7 +13,8 @@
     "deploy": "hardhat ignition deploy ignition/modules/$npm_config_module.ts --network $npm_config_network",
     "coverage": "hardhat coverage",
     "console": "hardhat console --network localhost",
-    "node": "hardhat node"
+    "node": "hardhat node",
+    "format": "prettier --write . --ignore-path .gitignore"
   },
   "repository": {
     "type": "git",

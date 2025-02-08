@@ -17,7 +17,7 @@ Please include a summary of the changes and the related issue(s). List any depen
 
 Please describe the tests that you ran to verify your changes. Include any relevant details and the test configurations.
 
-- **Test A:** 
+- **Test A:**
 - **Test B:**
 
 ## Checklist
