@@ -1,54 +1,54 @@
 {
-  "name": "decx-press",
-  "version": "1.0.0",
-  "description": "The blockchain-powered infrastructure for a persistent, efficient and secure way to transmit content",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs",
-    "test": "test"
-  },
-  "scripts": {
-    "compile": "hardhat compile",
-    "test": "hardhat test",
-    "deploy": "hardhat ignition deploy ignition/modules/$npm_config_module.ts --network $npm_config_network",
-    "coverage": "hardhat coverage",
-    "console": "hardhat console --network localhost",
-    "node": "hardhat node",
-    "format": "prettier . --write",
-    "lint-staged": "lint-staged",
-    "prepare": "husky"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
+    "name": "decx-press",
+    "version": "1.0.0",
+    "description": "The blockchain-powered infrastructure for a persistent, efficient and secure way to transmit content",
+    "main": "index.js",
+    "directories": {
+        "doc": "docs",
+        "test": "test"
+    },
+    "scripts": {
+        "compile": "hardhat compile",
+        "test": "hardhat test",
+        "deploy": "hardhat ignition deploy ignition/modules/$npm_config_module.ts --network $npm_config_network",
+        "coverage": "hardhat coverage",
+        "console": "hardhat console --network localhost",
+        "node": "hardhat node",
+        "format": "prettier . --write --plugin=prettier-plugin-solidity",
+        "lint-staged": "lint-staged",
+        "prepare": "husky"
+    },
+    "husky": {
+        "hooks": {
+            "pre-commit": "lint-staged"
+        }
+    },
+    "lint-staged": {
+        "**/*.{js,ts,jsx,tsx,json,css,md,yml,yaml}": "prettier --write"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/decx-press/decx-press.git"
+    },
+    "keywords": [
+        "blockchain",
+        "ethereum",
+        "content"
+    ],
+    "author": "decx-press",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/decx-press/decx-press/issues"
+    },
+    "homepage": "https://github.com/decx-press/decx-press#readme",
+    "devDependencies": {
+        "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+        "hardhat": "^2.22.17",
+        "hardhat-gas-reporter": "^1.0.10",
+        "husky": "^9.1.7",
+        "lint-staged": "^15.4.3",
+        "prettier": "^3.4.2",
+        "prettier-plugin-solidity": "^1.4.2",
+        "solidity-coverage": "^0.8.14"
     }
-  },
-  "lint-staged": {
-    "**/*.{js,ts,jsx,tsx,json,css,md,yml,yaml}": "prettier --write"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/decx-press/decx-press.git"
-  },
-  "keywords": [
-    "blockchain",
-    "ethereum",
-    "content"
-  ],
-  "author": "decx-press",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/decx-press/decx-press/issues"
-  },
-  "homepage": "https://github.com/decx-press/decx-press#readme",
-  "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.22.17",
-    "hardhat-gas-reporter": "^1.0.10",
-    "husky": "^9.1.7",
-    "lint-staged": "^15.4.3",
-    "prettier": "^3.4.2",
-    "prettier-plugin-solidity": "^1.4.2",
-    "solidity-coverage": "^0.8.14"
-  }
 }

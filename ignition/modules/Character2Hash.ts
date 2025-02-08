@@ -4,8 +4,8 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 const Character2HashModule = buildModule("Character2HashModule", (m) => {
-  const Character2Hash = m.contract("Character2Hash", []);
-  return { Character2Hash };
+    const Character2Hash = m.contract("Character2Hash", []);
+    return { Character2Hash };
 });
 
 export default Character2HashModule;

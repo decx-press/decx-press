@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 contract HashRegistry {
-
     error HashRegistry_InvalidHash();
 
     mapping(bytes32 => bool) public hashExists;
@@ -16,7 +15,9 @@ contract HashRegistry {
         @param character The UTF character to hash.
         @return The hash of the character.
     */
-    function addCharacterHash(string memory character) public returns (bytes32) {
+    function addCharacterHash(
+        string memory character
+    ) public returns (bytes32) {
         // first check if the character is already in the contract
         if (character2HashLookup[character] != bytes32(0)) {
             return character2HashLookup[character];
@@ -39,8 +40,10 @@ contract HashRegistry {
         @param hash2 The second hash.
         @return The composite hash of the two hashes.
     */
-    function addHashesHash(bytes32 hash1, bytes32 hash2) public returns (bytes32) {
-
+    function addHashesHash(
+        bytes32 hash1,
+        bytes32 hash2
+    ) public returns (bytes32) {
         // ensure both the Character2Hash units exist before proceeding
         if (!isHashPresent(hash1) || !isHashPresent(hash2)) {
             revert HashRegistry_InvalidHash();
@@ -75,7 +78,9 @@ contract HashRegistry {
         @param character The character to get the hash for.
         @return The hash of the character.
     */
-    function getHashForCharacter(string memory character) public view returns (bytes32) {
+    function getHashForCharacter(
+        string memory character
+    ) public view returns (bytes32) {
         return character2HashLookup[character];
     }
 
@@ -85,7 +90,10 @@ contract HashRegistry {
         @param hash2 The second hash.
         @return The hash of the two hashes.
     */
-    function getHashForHashes(bytes32 hash1, bytes32 hash2) public view returns (bytes32) {
+    function getHashForHashes(
+        bytes32 hash1,
+        bytes32 hash2
+    ) public view returns (bytes32) {
         return Hashes2HashLookup[hash1][hash2];
     }
 }

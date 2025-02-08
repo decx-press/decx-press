@@ -1,0 +1,16 @@
+{
+    "printWidth": 80,
+    "tabWidth": 4,
+    "useTabs": false,
+    "semi": true,
+    "singleQuote": false,
+    "bracketSpacing": true,
+    "overrides": [
+      {
+        "files": "*.sol",
+        "options": {
+          "parser": "solidity-parse"
+        }
+      }
+    ]
+  }
