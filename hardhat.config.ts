@@ -1,5 +1,6 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "hardhat-gas-reporter";
+import "solidity-coverage";
 import "@nomicfoundation/hardhat-toolbox";
 
 const config: HardhatUserConfig = {
@@ -21,6 +22,7 @@ const config: HardhatUserConfig = {
   },
   paths: {
     sources: "./contracts", // Base path for Solidity files
+    tests: "./test", // Base path for test files
   },
 };
 
