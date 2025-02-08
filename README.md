@@ -1,7 +1,7 @@
 # decx.press Infrastructure
 
 ![Hardhat Tests](https://github.com/decx-press/decx-press/actions/workflows/test.yml/badge.svg)
-![Coverage Status](https://coveralls.io/repos/github/decx-press/decx-press/badge.svg?branch=main)
+![Code Coverage](https://codecov.io/gh/decx-press/decx-press/branch/main/graph/badge.svg)
 
 ## Table of Contents
 
