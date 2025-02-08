@@ -19,7 +19,12 @@ jobs:
         run: npm install
 
       - name: Run Coverage
-        run: npx hardhat coverage --reporter=text-lcov | tee coverage.lcov
+        run: npx hardhat coverage --reporter=lcov --temp ./coverage
+
+      - name: Debug Coverage Files
+        run: |
+          ls -lh coverage/
+          cat coverage/lcov.info || echo "No coverage file found"
 
       - name: Upload to Coveralls
         uses: coverallsapp/github-action@v2
