@@ -1,5 +1,8 @@
 # decx.press Infrastructure
 
+![Hardhat Tests](https://github.com/decx-press/decx-press/actions/workflows/test.yml/badge.svg)
+![Coverage Status](https://coveralls.io/repos/github/decx-press/decx-press/badge.svg?branch=main)
+
 ## Table of Contents
 
 - [Getting Started](#getting-started)
