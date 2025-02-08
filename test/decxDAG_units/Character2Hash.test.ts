@@ -20,7 +20,7 @@ describe("Character2Hash", function () {
     // Deploy the contract
     const Character2Hash = await ethers.getContractFactory("Character2Hash");
     const character2HashContract = await Character2Hash.deploy(
-      hashRegistryContract.target
+      hashRegistryContract.target,
     );
 
     return { character2HashContract, hashRegistryContract };
@@ -29,7 +29,7 @@ describe("Character2Hash", function () {
   describe("Deployment", function () {
     it("Should deploy successfully", async function () {
       const { character2HashContract } = await loadFixture(
-        deployCharacter2HashFixture
+        deployCharacter2HashFixture,
       );
 
       // Check that the contract has a valid address
@@ -40,54 +40,54 @@ describe("Character2Hash", function () {
   describe("Storage and Lookup", function () {
     it("Should reject empty inputs", async function () {
       const { character2HashContract } = await loadFixture(
-        deployCharacter2HashFixture
+        deployCharacter2HashFixture,
       );
 
       await expect(
-        character2HashContract.addCharacter2Hash("")
+        character2HashContract.addCharacter2Hash(""),
       ).to.be.revertedWithCustomError(
         character2HashContract,
-        INVALID_CHARACTER_ERROR
+        INVALID_CHARACTER_ERROR,
       );
     });
 
     it("Should reject multiple inputs", async function () {
       const { character2HashContract } = await loadFixture(
-        deployCharacter2HashFixture
+        deployCharacter2HashFixture,
       );
 
       await expect(
-        character2HashContract.addCharacter2Hash("ab")
+        character2HashContract.addCharacter2Hash("ab"),
       ).to.be.revertedWithCustomError(
         character2HashContract,
-        INVALID_CHARACTER_ERROR
+        INVALID_CHARACTER_ERROR,
       );
     });
 
     it("Should reject control characters & null inputs", async function () {
       const { character2HashContract } = await loadFixture(
-        deployCharacter2HashFixture
+        deployCharacter2HashFixture,
       );
 
       await expect(
-        character2HashContract.addCharacter2Hash("\x00")
+        character2HashContract.addCharacter2Hash("\x00"),
       ).to.be.revertedWithCustomError(
         character2HashContract,
-        INVALID_CHARACTER_ERROR
+        INVALID_CHARACTER_ERROR,
       );
 
       await expect(
-        character2HashContract.addCharacter2Hash("\x0D")
+        character2HashContract.addCharacter2Hash("\x0D"),
       ).to.be.revertedWithCustomError(
         character2HashContract,
-        INVALID_CHARACTER_ERROR
+        INVALID_CHARACTER_ERROR,
       );
 
       await expect(
-        character2HashContract.addCharacter2Hash("\x7F")
+        character2HashContract.addCharacter2Hash("\x7F"),
       ).to.be.revertedWithCustomError(
         character2HashContract,
-        INVALID_CHARACTER_ERROR
+        INVALID_CHARACTER_ERROR,
       );
     });
   });
@@ -95,7 +95,7 @@ describe("Character2Hash", function () {
   describe("Character Validation through addCharacter2Hash", function () {
     it("Should handle all UTF-8 cases", async function () {
       const { character2HashContract } = await loadFixture(
-        deployCharacter2HashFixture
+        deployCharacter2HashFixture,
       );
 
       // Valid cases
@@ -118,17 +118,17 @@ describe("Character2Hash", function () {
 
     it("Should reject invalid UTF-8 first bytes", async function () {
       const { character2HashContract } = await loadFixture(
-        deployCharacter2HashFixture
+        deployCharacter2HashFixture,
       );
 
       // Invalid 2-byte sequences (first byte wrong)
       const invalid2Byte =
         String.fromCharCode(0xe0) + String.fromCharCode(0x80);
       await expect(
-        character2HashContract.addCharacter2Hash(invalid2Byte)
+        character2HashContract.addCharacter2Hash(invalid2Byte),
       ).to.be.revertedWithCustomError(
         character2HashContract,
-        INVALID_CHARACTER_ERROR
+        INVALID_CHARACTER_ERROR,
       );
 
       // Invalid 3-byte sequences (first byte wrong)
@@ -137,10 +137,10 @@ describe("Character2Hash", function () {
         String.fromCharCode(0x80) +
         String.fromCharCode(0x80);
       await expect(
-        character2HashContract.addCharacter2Hash(invalid3Byte)
+        character2HashContract.addCharacter2Hash(invalid3Byte),
       ).to.be.revertedWithCustomError(
         character2HashContract,
-        INVALID_CHARACTER_ERROR
+        INVALID_CHARACTER_ERROR,
       );
 
       // Invalid 4-byte sequences (first byte wrong)
@@ -150,10 +150,10 @@ describe("Character2Hash", function () {
         String.fromCharCode(0x80) +
         String.fromCharCode(0x80);
       await expect(
-        character2HashContract.addCharacter2Hash(invalid4Byte)
+        character2HashContract.addCharacter2Hash(invalid4Byte),
       ).to.be.revertedWithCustomError(
         character2HashContract,
-        INVALID_CHARACTER_ERROR
+        INVALID_CHARACTER_ERROR,
       );
     });
   });
@@ -161,7 +161,7 @@ describe("Character2Hash", function () {
   describe("Gas Optimization", function () {
     it("Should optimize gas usage by avoiding duplicate hashing", async function () {
       const { character2HashContract } = await loadFixture(
-        deployCharacter2HashFixture
+        deployCharacter2HashFixture,
       );
 
       // Add the first Character2Hash unit

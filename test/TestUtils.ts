@@ -34,8 +34,8 @@ export class TestUtils {
     return keccak256(
       AbiCoder.defaultAbiCoder().encode(
         ["bytes32", "bytes32"],
-        [hashes[0], hashes[1]]
-      )
+        [hashes[0], hashes[1]],
+      ),
     );
   }
 
@@ -51,7 +51,7 @@ export class TestUtils {
     // neatly exit out if we can't get the ETH price so we don't break the test
     if (!ethPrice) {
       console.warn(
-        "Failed to fetch ETH price, likely due to rate limiting. Try again later."
+        "Failed to fetch ETH price, likely due to rate limiting. Try again later.",
       );
       return;
     }
@@ -77,7 +77,7 @@ export class TestUtils {
           "Gas fee": receipt.gasUsed.toString(),
           "In USD": `$${usdPrice.toFixed(4)}`,
         };
-      })
+      }),
     );
   }
 
@@ -97,7 +97,7 @@ export class TestUtils {
   private static async GetEthPrice() {
     // use coingecko api for USD price
     const response = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
+      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
     );
     const data = await response.json();
     // conditionally get the price (we may encouner rate limiting)

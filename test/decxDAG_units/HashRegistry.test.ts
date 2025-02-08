@@ -22,7 +22,7 @@ describe("HashRegistry", function () {
   describe("Deployment", function () {
     it("Should deploy successfully", async function () {
       const { hashRegistryContract } = await loadFixture(
-        deployHashRegistryFixture
+        deployHashRegistryFixture,
       );
 
       // Check that the contract has a valid address
@@ -33,7 +33,7 @@ describe("HashRegistry", function () {
   describe("Storage and Lookup", function () {
     it("Should store a single UTF Character", async function () {
       const { hashRegistryContract } = await loadFixture(
-        deployHashRegistryFixture
+        deployHashRegistryFixture,
       );
       const hash = TestUtils.GenerateHashFromChar(CHAR1);
 
@@ -51,7 +51,7 @@ describe("HashRegistry", function () {
 
     it("Should return the existing hash for duplicate Character2Hash Units", async function () {
       const { hashRegistryContract } = await loadFixture(
-        deployHashRegistryFixture
+        deployHashRegistryFixture,
       );
 
       // Add the first Character2Hash unit
@@ -62,7 +62,7 @@ describe("HashRegistry", function () {
 
       // Check that the atomicLookupMapping is not zero for the added character
       expect(
-        await hashRegistryContract.getHashForCharacter(CHAR1)
+        await hashRegistryContract.getHashForCharacter(CHAR1),
       ).to.not.equal(ethers.ZeroHash);
       expect(hash1).to.not.equal(ethers.ZeroHash); // Ensure the returned hash is also not zero
 
@@ -78,7 +78,7 @@ describe("HashRegistry", function () {
 
     it("Should return the existing hash for duplicate Hashes2Hash Units", async function () {
       const { hashRegistryContract } = await loadFixture(
-        deployHashRegistryFixture
+        deployHashRegistryFixture,
       );
 
       // Add the first Character2Hash unit
@@ -91,12 +91,12 @@ describe("HashRegistry", function () {
 
       const hash2hashes1 = await hashRegistryContract.getHashForHashes(
         charHash,
-        charHash
+        charHash,
       );
 
       const hash2hashes2 = await hashRegistryContract.getHashForHashes(
         charHash,
-        charHash
+        charHash,
       );
 
       // Verify that the hashes are the same
@@ -105,7 +105,7 @@ describe("HashRegistry", function () {
 
     it("Should not allow invalid hash pairs", async function () {
       const { hashRegistryContract } = await loadFixture(
-        deployHashRegistryFixture
+        deployHashRegistryFixture,
       );
 
       // First add the Character2Hash unit
@@ -116,15 +116,15 @@ describe("HashRegistry", function () {
       const fakeHash = "0x" + "1".repeat(64); // Creates a valid bytes32 hex string
 
       await expect(
-        hashRegistryContract.addHashesHash(atomicHash1, fakeHash)
+        hashRegistryContract.addHashesHash(atomicHash1, fakeHash),
       ).to.be.revertedWithCustomError(hashRegistryContract, INVALID_HASH_ERROR);
 
       await expect(
-        hashRegistryContract.addHashesHash(fakeHash, atomicHash1)
+        hashRegistryContract.addHashesHash(fakeHash, atomicHash1),
       ).to.be.revertedWithCustomError(hashRegistryContract, INVALID_HASH_ERROR);
 
       await expect(
-        hashRegistryContract.addHashesHash(fakeHash, fakeHash)
+        hashRegistryContract.addHashesHash(fakeHash, fakeHash),
       ).to.be.revertedWithCustomError(hashRegistryContract, INVALID_HASH_ERROR);
     });
   });

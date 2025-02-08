@@ -21,7 +21,7 @@ describe("Hashes2Hash", function () {
     // Then deploy Hashes2Hash with HashRegistry's address
     const Hashes2Hash = await ethers.getContractFactory("Hashes2Hash");
     const Hashes2HashContract = await Hashes2Hash.deploy(
-      hashRegistryContract.target
+      hashRegistryContract.target,
     );
 
     return { hashRegistryContract, Hashes2HashContract };
@@ -30,7 +30,7 @@ describe("Hashes2Hash", function () {
   describe("Deployment", function () {
     it("Should deploy successfully", async function () {
       const { Hashes2HashContract } = await loadFixture(
-        deployHashes2HashFixture
+        deployHashes2HashFixture,
       );
 
       // Check that the contract has a valid address
@@ -41,7 +41,7 @@ describe("Hashes2Hash", function () {
   describe("Storage and Lookup", function () {
     it("Should ensure that the input is an array of two hashes", async function () {
       const { hashRegistryContract, Hashes2HashContract } = await loadFixture(
-        deployHashes2HashFixture
+        deployHashes2HashFixture,
       );
 
       // Add Character2Hash units and get their hashes
@@ -54,24 +54,24 @@ describe("Hashes2Hash", function () {
 
       const invalidHashes1 = [atomicHash1, atomicHash2, atomicHash1];
       await expect(
-        Hashes2HashContract.addHashes2Hash(invalidHashes1)
+        Hashes2HashContract.addHashes2Hash(invalidHashes1),
       ).to.be.revertedWithCustomError(Hashes2HashContract, INVALID_ARGS_ERROR);
     });
 
     it("Should handle empty array input", async function () {
       const { Hashes2HashContract } = await loadFixture(
-        deployHashes2HashFixture
+        deployHashes2HashFixture,
       );
 
       const emptyArray: string[] = [];
       await expect(
-        Hashes2HashContract.addHashes2Hash(emptyArray)
+        Hashes2HashContract.addHashes2Hash(emptyArray),
       ).to.be.revertedWithCustomError(Hashes2HashContract, INVALID_ARGS_ERROR);
     });
 
     it("Should reject single hash input", async function () {
       const { hashRegistryContract, Hashes2HashContract } = await loadFixture(
-        deployHashes2HashFixture
+        deployHashes2HashFixture,
       );
 
       await hashRegistryContract.addCharacterHash(CHAR1);
@@ -79,13 +79,13 @@ describe("Hashes2Hash", function () {
 
       // Try with just one hash
       await expect(
-        Hashes2HashContract.addHashes2Hash([atomicHash1])
+        Hashes2HashContract.addHashes2Hash([atomicHash1]),
       ).to.be.revertedWithCustomError(Hashes2HashContract, INVALID_ARGS_ERROR);
     });
 
     it("Should store two hashes in the hash registry", async function () {
       const { hashRegistryContract, Hashes2HashContract } = await loadFixture(
-        deployHashes2HashFixture
+        deployHashes2HashFixture,
       );
 
       // Add Character2Hash units and get their hashes
@@ -108,7 +108,7 @@ describe("Hashes2Hash", function () {
       // Get the hash from the hash registry
       const generatedHash = await hashRegistryContract.getHashForHashes(
         atomicHash1,
-        atomicHash2
+        atomicHash2,
       );
 
       // Calculate the expected hash the same way the contract does
@@ -126,7 +126,7 @@ describe("Hashes2Hash", function () {
   describe("Gas Optimization", function () {
     it("Should optimize gas usage by avoiding duplicate hashing", async function () {
       const { hashRegistryContract, Hashes2HashContract } = await loadFixture(
-        deployHashes2HashFixture
+        deployHashes2HashFixture,
       );
 
       // Add Character2Hash units and get their hashes
