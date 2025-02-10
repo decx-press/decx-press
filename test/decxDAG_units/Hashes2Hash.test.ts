@@ -4,9 +4,6 @@ import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import "@nomicfoundation/hardhat-chai-matchers";
 import { TestUtils } from "../TestUtils";
 
-// TODO: move to constants string?
-const INVALID_ARGS_ERROR = "Hashes2Hash_InvalidArgs";
-
 // Generate characters and their atomic hashes
 const CHAR1 = "a";
 const CHAR2 = "b";
@@ -39,48 +36,28 @@ describe("Hashes2Hash", function () {
   });
 
   describe("Storage and Lookup", function () {
-    it("Should ensure that the input is an array of two hashes", async function () {
-      const { hashRegistryContract, Hashes2HashContract } = await loadFixture(
+    it("should reject zero hash", async function () {
+      const { Hashes2HashContract, hashRegistryContract } = await loadFixture(
         deployHashes2HashFixture
       );
-
-      // Add Character2Hash units and get their hashes
-      await hashRegistryContract.addCharacterHash(CHAR1);
-      await hashRegistryContract.addCharacterHash(CHAR2);
-
-      // Get the actual Character2Hash unit hashes using getHas
-      const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
-      const atomicHash2 = await hashRegistryContract.getHashForCharacter(CHAR2);
-
-      const invalidHashes1 = [atomicHash1, atomicHash2, atomicHash1];
-      await expect(
-        Hashes2HashContract.addHashes2Hash(invalidHashes1)
-      ).to.be.revertedWithCustomError(Hashes2HashContract, INVALID_ARGS_ERROR);
-    });
-
-    it("Should handle empty array input", async function () {
-      const { Hashes2HashContract } = await loadFixture(
-        deployHashes2HashFixture
-      );
-
-      const emptyArray: string[] = [];
-      await expect(
-        Hashes2HashContract.addHashes2Hash(emptyArray)
-      ).to.be.revertedWithCustomError(Hashes2HashContract, INVALID_ARGS_ERROR);
-    });
-
-    it("Should reject single hash input", async function () {
-      const { hashRegistryContract, Hashes2HashContract } = await loadFixture(
-        deployHashes2HashFixture
-      );
-
       await hashRegistryContract.addCharacterHash(CHAR1);
       const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
+      const zeroHash = ethers.ZeroHash;
 
-      // Try with just one hash
+      // expect the first hash to be rejected
       await expect(
-        Hashes2HashContract.addHashes2Hash([atomicHash1])
-      ).to.be.revertedWithCustomError(Hashes2HashContract, INVALID_ARGS_ERROR);
+        Hashes2HashContract.addHashes2Hash([zeroHash, atomicHash1])
+      ).to.be.revertedWithCustomError(Hashes2HashContract, "Hashes2Hash_ZeroHashNotAllowed");
+
+      // expect the second hash to be rejected
+      await expect(
+        Hashes2HashContract.addHashes2Hash([atomicHash1, zeroHash])
+      ).to.be.revertedWithCustomError(Hashes2HashContract, "Hashes2Hash_ZeroHashNotAllowed");
+
+      // expect both hashes to be rejected
+      await expect(
+        Hashes2HashContract.addHashes2Hash([zeroHash, zeroHash])
+      ).to.be.revertedWithCustomError(Hashes2HashContract, "Hashes2Hash_ZeroHashNotAllowed");
     });
 
     it("Should store two hashes in the hash registry", async function () {
