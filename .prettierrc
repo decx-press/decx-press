@@ -6,12 +6,5 @@
     "singleQuote": false,
     "trailingComma": "none",
     "semi": true,
-    "overrides": [
-      {
-        "files": "*.sol",
-        "options": {
-          "singleQuote": false
-        }
-      }
-    ]
-  }
+    "plugins": ["prettier-plugin-solidity"]
+}
