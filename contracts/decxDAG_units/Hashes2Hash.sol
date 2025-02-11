@@ -7,15 +7,19 @@ contract Hashes2Hash {
     HashRegistry private hashRegistryContract;
 
     error Hashes2Hash_InvalidArgs();
+    error Hashes2Hash_ZeroHashNotAllowed();
 
     constructor(address _hashRegistryAddress) {
         hashRegistryContract = HashRegistry(_hashRegistryAddress);
     }
-
-    function addHashes2Hash(bytes32[] memory hashArray) public returns (bytes32) {
-        // ensure the hash array is of length 2
-        if (hashArray.length != 2) {
-            revert Hashes2Hash_InvalidArgs();
+    
+    ///   @notice Add a Hashes2Hash unit to the contract.
+    ///   @param hashArray The array of hashes to add to the contract.
+    ///   @return The hash of the hashes.
+    function addHashes2Hash(bytes32[2] memory hashArray) public returns (bytes32) {
+        // ensure the hashes are not zero before sending to the hash registry
+        if (hashArray[0] == bytes32(0) || hashArray[1] == bytes32(0)) {
+            revert Hashes2Hash_ZeroHashNotAllowed();
         }
 
         // and send it to the hash registry for storage
