@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 contract HashRegistry {
-
     error HashRegistry_InvalidHash();
 
     mapping(bytes32 => bool) public hashExists;
@@ -40,7 +39,6 @@ contract HashRegistry {
         @return The composite hash of the two hashes.
     */
     function addHashesHash(bytes32 hash1, bytes32 hash2) public returns (bytes32) {
-
         // ensure both the Character2Hash units exist before proceeding
         if (!isHashPresent(hash1) || !isHashPresent(hash2)) {
             revert HashRegistry_InvalidHash();

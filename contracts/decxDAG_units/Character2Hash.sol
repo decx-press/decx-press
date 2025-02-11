@@ -16,7 +16,7 @@ contract Character2Hash {
      *   @dev Add a Character2Hash unit to the contract.
      *   @param character The UTF character to add to the contract.
      *   @return The hash of the character.
-    */
+     */
     function addCharacter2Hash(string memory character) public returns (bytes32) {
         // first check if the character is valid
         if (!isCharacterValid(character)) {
@@ -33,13 +33,13 @@ contract Character2Hash {
      *  @dev Check if a character is valid.
      *  @param character The character to check.
      *  @return True if the character is valid, false otherwise.
-    */
+     */
     function isCharacterValid(string memory character) private pure returns (bool) {
         bytes memory b = bytes(character);
         uint256 l = b.length;
 
         // Check if it's empty or too long to be a single UTF-8 character
-        if (l == 0 || l > 4) return false;  // UTF-8 characters are 1-4 bytes
+        if (l == 0 || l > 4) return false; // UTF-8 characters are 1-4 bytes
 
         // Get the first byte
         bytes1 firstByte = b[0];
@@ -60,7 +60,8 @@ contract Character2Hash {
                 // 3-byte UTF-8 (0x800-0xFFFF)
                 // First byte must be 1110xxxx (0xE0-0xEF)
                 if (firstByte < 0xE0 || firstByte > 0xEF) return false;
-            } else { // l == 4
+            } else {
+                // l == 4
                 // 4-byte UTF-8 (0x10000-0x10FFFF)
                 // First byte must be 11110xxx (0xF0-0xF7)
                 if (firstByte < 0xF0 || firstByte > 0xF7) return false;

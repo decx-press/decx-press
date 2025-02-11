@@ -4,8 +4,8 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 const HashRegistryModule = buildModule("HashRegistryModule", (m) => {
-  const HashRegistry = m.contract("HashRegistry", []);
-  return { HashRegistry };
+    const HashRegistry = m.contract("HashRegistry", []);
+    return { HashRegistry };
 });
 
 export default HashRegistryModule;

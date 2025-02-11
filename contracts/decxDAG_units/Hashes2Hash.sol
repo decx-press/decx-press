@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import "./HashRegistry.sol";
 
-contract Hashes2Hash{
+contract Hashes2Hash {
     HashRegistry private hashRegistryContract;
 
     error Hashes2Hash_InvalidArgs();
