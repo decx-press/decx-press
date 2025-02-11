@@ -12,7 +12,7 @@ contract Hashes2Hash {
     constructor(address _hashRegistryAddress) {
         hashRegistryContract = HashRegistry(_hashRegistryAddress);
     }
-    
+
     ///   @notice Add a Hashes2Hash unit to the contract.
     ///   @param hashArray The array of hashes to add to the contract.
     ///   @return The hash of the hashes.
