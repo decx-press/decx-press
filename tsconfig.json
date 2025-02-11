@@ -1,13 +1,13 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "CommonJS",
-    "strict": true,
-    "esModuleInterop": true,
-    "types": ["node", "mocha"],
-    "outDir": "dist",
-    "skipLibCheck": true
-  },
-  "include": ["test", "scripts"],
-  "exclude": ["node_modules"]
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "CommonJS",
+        "strict": true,
+        "esModuleInterop": true,
+        "types": ["node", "mocha"],
+        "outDir": "dist",
+        "skipLibCheck": true
+    },
+    "include": ["test", "scripts"],
+    "exclude": ["node_modules"]
 }

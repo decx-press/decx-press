@@ -1,9 +1,13 @@
 # decx.press Infrastructure
 
+![Hardhat Tests](https://github.com/decx-press/decx-press/actions/workflows/test.yml/badge.svg)
+![Code Coverage](https://codecov.io/gh/decx-press/decx-press/branch/main/graph/badge.svg)
+
 ## Table of Contents
+
 - [Getting Started](#getting-started)
-    - [Prerequisites](#prerequisites)
-    - [Setup](#setup)
+  - [Prerequisites](#prerequisites)
+  - [Setup](#setup)
 - [Project Directory Structure](#project-directory-structure)
 
 ## Getting Started
@@ -14,78 +18,97 @@
 - [npm](https://www.npmjs.com/get-npm)
 
 #### Recommended Tools
+
 - If using VSCode, install the [Solidity/Hardhat](https://marketplace.visualstudio.com/items?itemName=NomicFoundation.hardhat-solidity) extension.
 
 ### Setup
 
 #### 1. Clone the repository
 
->```bash
+> ```bash
 > git clone git@github.com:decx-press/decx-press.git # for ssh
 > cd decx-press
 > ```
 
 #### 2. Install dependencies
+
 Install the required npm packages:
+
 > ```bash
 > npm install
 > ```
 
 This will install the required npm packages:
+
 - **[Hardhat](https://hardhat.org/docs)**: The development environment for building, testing, and deploying smart contracts. It installs Solidity, Ethers, Chai, and other tools.
 - **[Hardhat Toolbox](https://hardhat.org/hardhat-runner/plugins/nomicfoundation-hardhat-toolbox)**: A collection of tools and utilities for Hardhat, including a local Ethereum network, a test runner, and a coverage tool. It includes:
-    - **@nomiclabs/hardhat-ethers**: A plugin for Hardhat that provides a set of utilities for interacting with the Ethereum network using Ethers.
-    - **@nomiclabs/hardhat-etherscan**: A plugin for Hardhat that provides a set of utilities for interacting with the Etherscan API.
-    - **@nomiclabs/hardhat-waffle**: A plugin for Hardhat that provides a set of utilities for testing smart contracts using Waffle.
-    - **@nomicfoundation/hardhat-chai-matchers**: Provides Chai testing library matchers specifically for smart contracts.
-    - **hardhat-gas-reporter**: Adds gas usage reports for your transactions and smart contract function calls.
-    - **solidity-coverage**: A plugin for Hardhat that provides a set of utilities for testing smart contracts using Solidity Coverage.
-    - **typechain**: A plugin for Hardhat that generates TypeScript bindings for your smart contracts.
-
+  - **@nomiclabs/hardhat-ethers**: A plugin for Hardhat that provides a set of utilities for interacting with the Ethereum network using Ethers.
+  - **@nomiclabs/hardhat-etherscan**: A plugin for Hardhat that provides a set of utilities for interacting with the Etherscan API.
+  - **@nomiclabs/hardhat-waffle**: A plugin for Hardhat that provides a set of utilities for testing smart contracts using Waffle.
+  - **@nomicfoundation/hardhat-chai-matchers**: Provides Chai testing library matchers specifically for smart contracts.
+  - **hardhat-gas-reporter**: Adds gas usage reports for your transactions and smart contract function calls.
+  - **solidity-coverage**: A plugin for Hardhat that provides a set of utilities for testing smart contracts using Solidity Coverage.
+  - **typechain**: A plugin for Hardhat that generates TypeScript bindings for your smart contracts.
 
 #### 3. Compile the Contracts
+
 Compile your Solidity contracts using Hardhat’s compiler:
+
 > ```bash
 > npm run compile # defined in package.json under 'scripts'
 > ```
 
 #### 4. Run a Local Hardhat Node
+
 Start a local Ethereum node for testing and development:
+
 > ```bash
 > npm run node # defined in package.json under 'scripts'
 > ```
-This will start a local Ethereum node on port 8545 and will generate a list of accounts with private keys and 1000 ETH for each account.
+>
+> This will start a local Ethereum node on port 8545 and will generate a list of accounts with private keys and 1000 ETH for each account.
 
 #### 5. Deploy the Contracts
+
 Deploy your contracts to the local Hardhat node (must have a running local hardhat node in the previous step):
+
 > ```bash
 > npm run deploy --module=module_file_name --network=network_name # defined in package.json under 'scripts'
 > ```
-For `module_file_name`, use the name of the module file you want to deploy. Modules are located in the `ignition/modules` directory.
-For `network_name`, use:
+>
+> For `module_file_name`, use the name of the module file you want to deploy. Modules are located in the `ignition/modules` directory.
+> For `network_name`, use:
+
 - **`localhost`** for local testing. (a running local hardhat node is required)
 - **`sepolia`** for Sepolia testnet.
 - **`mainnet`** for Ethereum mainnet (use with caution).
 
 To use the placeholder Lock module, run:
+
 > ```bash
 > npm run deploy --module=Lock --network=localhost
 > ```
 
 #### 6. Run Tests
+
 Run your tests using Hardhat’s test runner:
+
 > ```bash
 > npm run test # defined in package.json under 'scripts'
 > ```
 
 #### 7. Check Test Coverage
+
 Check the test coverage of your contracts:
+
 > ```bash
 > npm run coverage # defined in package.json under 'scripts'
 > ```
 
 #### 8. Interact with the Contracts
+
 Interact with your deployed contracts using Hardhat’s interactive console:
+
 > ```bash
 > npm run console # defined in package.json under 'scripts'
 > ```
