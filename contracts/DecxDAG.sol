@@ -5,7 +5,7 @@ import "./decxDAG_units/Character2Hash.sol";
 import "./decxDAG_units/Hashes2Hash.sol";
 
 contract DecxDAG {
-    error DecxDAG_EmptyInput();
+    error DecxDAG_EmptyStringNotAllowed();
 
     Character2Hash private character2Hash;
     Hashes2Hash private hashes2Hash;
@@ -29,7 +29,7 @@ contract DecxDAG {
         stringLength = stringBytes.length;
 
         if (stringLength == 0) {
-            revert DecxDAG_EmptyInput();
+            revert DecxDAG_EmptyStringNotAllowed();
         }
 
         // Step 1: Convert the string to an array of hashes
@@ -94,29 +94,35 @@ contract DecxDAG {
     /// @param hashes The array of hashes to be reduced.
     /// @return The final computed hash.
     function reduceHashes(bytes32[] memory hashes) private returns (bytes32) {
-        uint256 index = 0;
-        while (charCount > 1) {
+        uint256 l = 0;
+        uint256 L = charCount;
+
+        while (L > 1) {
             // skip indices that have been processed or are out of bounds
-            if (hashes[index] == bytes32(0) || index > stringLength) {
-                index = 0;
+            if (hashes[l] == bytes32(0) || l > L) {
+                l = 0;
             }
             // if this is the first pass and it's an odd number of hashes, move the last hash up
-            if (hashes[index + 1] == bytes32(0)) {
-                hashes[(index + 1) / 2] = hashes[index];
-                hashes[index] = bytes32(0);
+            if (hashes[l + 1] == bytes32(0) && l + 1 < L) {
+                hashes[(l + 1) / 2] = hashes[l];
+                hashes[l] = bytes32(0);
+                // decrement the length
+                L = L - 1;
+                // return the l to the start
+                l = 0;
             }
             else {
                 // default case: merge two hashes
-                bytes32 newHash = hashes2Hash.addHashes2Hash([hashes[index], hashes[index + 1]]);
+                bytes32 newHash = hashes2Hash.addHashes2Hash([hashes[l], hashes[l + 1]]);
                 // reset the two hashes to null
-                hashes[index] = bytes32(0);
-                hashes[index + 1] = bytes32(0);
+                hashes[l] = bytes32(0);
+                hashes[l + 1] = bytes32(0);
                 // store the new hash at the floor
-                hashes[(index + 1) / 2] = newHash;
+                hashes[(l + 1) / 2] = newHash;
                 // decrement the length
-                charCount = charCount - 1;
+                L = L - 1;
                 // increment the index
-                index = index + 2;
+                l = l + 2;
             }
         }
 
