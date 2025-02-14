@@ -46,24 +46,13 @@ contract DecxDAG {
     /// @return charCount The number of UTF-8 characters processed
     function convertStringToHashes(bytes memory stringBytes) private returns (bytes32[] memory hashes, uint256 charCount) {
         uint256 stringLength = stringBytes.length;
+        uint256 maxChars = stringLength; // Worst case: all single-byte characters
+        hashes = new bytes32[](maxChars);
         charCount = 0;
 
-        // Just count UTF-8 characters without validation
+        // Process each character
         for (uint256 i = 0; i < stringLength;) {
-            // Skip the appropriate number of bytes based on UTF-8 encoding
-            if ((stringBytes[i] & 0xf8) == 0xf0) i += 4;      // 4-byte character
-            else if ((stringBytes[i] & 0xf0) == 0xe0) i += 3; // 3-byte character
-            else if ((stringBytes[i] & 0xe0) == 0xc0) i += 2; // 2-byte character
-            else i += 1;                                       // 1-byte character
-            charCount++;
-        }
-
-        // Initialize the array of hashes to be processed
-        hashes = new bytes32[](charCount);
-        uint256 hashIndex = 0;
-
-        // Convert characters to hashes
-        for (uint256 i = 0; i < stringLength;) {
+            // Extract the next character
             uint256 charLen;
             if ((stringBytes[i] & 0xf8) == 0xf0) charLen = 4;      // 4-byte character
             else if ((stringBytes[i] & 0xf0) == 0xe0) charLen = 3; // 3-byte character
@@ -75,11 +64,12 @@ contract DecxDAG {
                 charBytes[j] = stringBytes[i + j];
             }
 
+            // Let character2Hash (which uses UTF8Validator) handle validation
             string memory character = string(charBytes);
-            hashes[hashIndex] = character2Hash.addCharacter2Hash(character);
+            hashes[charCount] = character2Hash.addCharacter2Hash(character);
 
             i += charLen;
-            hashIndex++;
+            charCount++;
         }
 
         return (hashes, charCount);
