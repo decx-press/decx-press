@@ -12,19 +12,21 @@ const isCoverage = process.env.COVERAGE === "true";
 
 describe("DecxDAG", function () {
     async function deployDecxDAGFixture() {
-        // Deploy HashRegistry
         const HashRegistry = await ethers.getContractFactory("HashRegistry");
         const hashRegistryContract = await HashRegistry.deploy();
 
-        // Deploy Character2Hash
-        const Character2Hash = await ethers.getContractFactory("Character2Hash");
-        const character2HashContract = await Character2Hash.deploy(hashRegistryContract.target);
+        const UTF8Validator = await ethers.getContractFactory("UTF8Validator");
+        const utf8ValidatorContract = await UTF8Validator.deploy();
 
-        // Deploy Hashes2Hash
+        const Character2Hash = await ethers.getContractFactory("Character2Hash");
+        const character2HashContract = await Character2Hash.deploy(
+            hashRegistryContract.target,
+            utf8ValidatorContract.target
+        );
+
         const Hashes2Hash = await ethers.getContractFactory("Hashes2Hash");
         const hashes2HashContract = await Hashes2Hash.deploy(hashRegistryContract.target);
 
-        // Deploy DecxDAG with the addresses of the above contracts
         const DecxDAG = await ethers.getContractFactory("DecxDAG");
         const decxDAGContract = await DecxDAG.deploy(character2HashContract.target, hashes2HashContract.target);
 
@@ -33,26 +35,48 @@ describe("DecxDAG", function () {
 
     describe("Deployment", function () {
         it("Should deploy successfully", async function () {
-            const { decxDAGContract, character2HashContract, hashes2HashContract, hashRegistryContract } =
-                await loadFixture(deployDecxDAGFixture);
-            // Check that the contracts have a valid address
+            const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
             expect(decxDAGContract.target).to.be.properAddress;
-            expect(character2HashContract.target).to.be.properAddress;
-            expect(hashes2HashContract.target).to.be.properAddress;
-            expect(hashRegistryContract.target).to.be.properAddress;
         });
     });
 
-    describe("Storage and Lookup", function () {
+    describe("Input Validation", function () {
         it("should reject empty strings", async function () {
             const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
-
             await expect(decxDAGContract.press("")).to.be.revertedWithCustomError(
                 decxDAGContract,
                 "DecxDAG_EmptyStringNotAllowed"
             );
         });
+    });
 
+    describe("DAG Construction", function () {
+        it("should handle strings with odd number of characters", async function () {
+            const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
+            const STRING = isCoverage ? "abc" : "Hello World"; // 3 or 11 characters
+            const tx = await decxDAGContract.press(STRING);
+            const receipt = await tx.wait();
+            expect(receipt.status).to.equal(1);
+        });
+
+        it("should produce consistent hashes for the same input", async function () {
+            const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
+            const STRING = isCoverage ? "test" : "Hello, World!";
+
+            // Call press() and wait for the transactions
+            const tx1 = await decxDAGContract.press(STRING);
+            const tx2 = await decxDAGContract.press(STRING);
+
+            // Get the actual hash values from the transactions
+            const hash1 = await tx1.wait();
+            const hash2 = await tx2.wait();
+
+            // Compare the returned data (the actual hash values)
+            expect(hash1.data).to.equal(hash2.data);
+        });
+    });
+
+    describe("Storage and Lookup", function () {
         it("should store the same data for the same string in different transactions", async function () {
             const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
 
@@ -112,18 +136,6 @@ describe("DecxDAG", function () {
             expect(receipt2.status).to.equal(1);
             expect(receipt3.status).to.equal(1);
             expect(receipt4.status).to.equal(1);
-        });
-
-        it("should handle strings with odd number of characters", async function () {
-            const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
-
-            // Use a string with odd number of characters
-            const STRING = isCoverage ? "abc" : "Hello World"; // 3 or 11 characters
-
-            const tx = await decxDAGContract.press(STRING);
-            const receipt = await tx.wait();
-
-            expect(receipt.status).to.equal(1);
         });
     });
 

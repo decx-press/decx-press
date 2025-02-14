@@ -48,27 +48,13 @@ contract DecxDAG {
         uint256 stringLength = stringBytes.length;
         charCount = 0;
 
-        // Count actual UTF-8 characters and validate UTF-8 encoding
+        // Just count UTF-8 characters without validation
         for (uint256 i = 0; i < stringLength;) {
-            // Validate there are enough bytes remaining for the character
-            if ((stringBytes[i] & 0xf8) == 0xf0) {      // 4-byte character
-                if (i + 4 > stringLength) revert("Invalid UTF-8: Incomplete 4-byte sequence");
-                i += 4;
-            }
-            else if ((stringBytes[i] & 0xf0) == 0xe0) { // 3-byte character
-                if (i + 3 > stringLength) revert("Invalid UTF-8: Incomplete 3-byte sequence");
-                i += 3;
-            }
-            else if ((stringBytes[i] & 0xe0) == 0xc0) { // 2-byte character
-                if (i + 2 > stringLength) revert("Invalid UTF-8: Incomplete 2-byte sequence");
-                i += 2;
-            }
-            else if ((stringBytes[i] & 0x80) == 0) {    // 1-byte character
-                i += 1;
-            }
-            else {
-                revert("Invalid UTF-8: Invalid leading byte");
-            }
+            // Skip the appropriate number of bytes based on UTF-8 encoding
+            if ((stringBytes[i] & 0xf8) == 0xf0) i += 4;      // 4-byte character
+            else if ((stringBytes[i] & 0xf0) == 0xe0) i += 3; // 3-byte character
+            else if ((stringBytes[i] & 0xe0) == 0xc0) i += 2; // 2-byte character
+            else i += 1;                                       // 1-byte character
             charCount++;
         }
 
@@ -79,7 +65,6 @@ contract DecxDAG {
         // Convert characters to hashes
         for (uint256 i = 0; i < stringLength;) {
             uint256 charLen;
-            // We don't need bounds checking here because we validated the string above
             if ((stringBytes[i] & 0xf8) == 0xf0) charLen = 4;      // 4-byte character
             else if ((stringBytes[i] & 0xf0) == 0xe0) charLen = 3; // 3-byte character
             else if ((stringBytes[i] & 0xe0) == 0xc0) charLen = 2; // 2-byte character

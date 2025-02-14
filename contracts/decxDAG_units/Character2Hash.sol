@@ -2,14 +2,17 @@
 pragma solidity ^0.8.28;
 
 import "./HashRegistry.sol";
+import "../interfaces/IUTF8Validator.sol";
+import "../interfaces/ICharacter2Hash.sol";
 
-contract Character2Hash {
-    error Character2Hash_InvalidCharacter();
+contract Character2Hash is ICharacter2Hash {
 
-    HashRegistry private hashRegistry; // Declare the HashRegistry contract
+    HashRegistry private hashRegistry;
+    IUTF8Validator private utf8Validator;
 
-    constructor(address _hashRegistryAddress) {
+    constructor(address _hashRegistryAddress, address _utf8ValidatorAddress) {
         hashRegistry = HashRegistry(_hashRegistryAddress);
+        utf8Validator = IUTF8Validator(_utf8ValidatorAddress);
     }
 
     /**
@@ -18,12 +21,10 @@ contract Character2Hash {
      *   @return The hash of the character.
      */
     function addCharacter2Hash(string memory character) public returns (bytes32) {
-        // first check if the character is valid
-        if (!isCharacterValid(character)) {
-            revert Character2Hash_InvalidCharacter();
-        }
+        // Validate the character using the UTF8Validator
+        utf8Validator.validateCharacter(character);
 
-        // use the hash registry to add the character and get the hash
+        // Use the hash registry to add the character and get the hash
         bytes32 hash = hashRegistry.addCharacterHash(character);
 
         return hash;
