@@ -7,6 +7,8 @@ import { TestUtils } from "../TestUtils";
 // Use a single character string for testing
 const CHAR = "a";
 
+const isCoverage = process.env.COVERAGE === "true";
+
 describe("Character2Hash", function () {
     // Define a fixture for consistent setup across tests
     async function deployCharacter2HashFixture() {
@@ -53,7 +55,8 @@ describe("Character2Hash", function () {
     });
 
     describe("Gas Optimization", function () {
-        it("Should optimize gas usage by avoiding duplicate hashing", async function () {
+        // Skip gas optimization tests during coverage
+        (isCoverage ? it.skip : it)("Should optimize gas usage by avoiding duplicate hashing", async function () {
             const { character2HashContract } = await loadFixture(deployCharacter2HashFixture);
 
             // Add the first Character2Hash unit

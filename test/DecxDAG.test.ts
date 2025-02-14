@@ -140,7 +140,8 @@ describe("DecxDAG", function () {
     });
 
     describe("Gas Optimization", function () {
-        it("Should optimize gas usage by avoiding duplicate hashing", async function () {
+        // Skip basic gas optimization test during coverage
+        (isCoverage ? it.skip : it)("Should optimize gas usage by avoiding duplicate hashing", async function () {
             const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
 
             const STRING1 = "Hello, world!";
@@ -170,55 +171,59 @@ describe("DecxDAG", function () {
             expect(receipt2.gasUsed).to.be.lessThan(receipt1.gasUsed);
         });
 
-        it("should optimize gas usage by avoiding duplicate hashing for longer strings", async function () {
-            const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
+        // Skip longer strings gas optimization test during coverage
+        (isCoverage ? it.skip : it)(
+            "should optimize gas usage by avoiding duplicate hashing for longer strings",
+            async function () {
+                const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
 
-            // Use shorter strings for coverage
-            const STRING1 = isCoverage ? "ABC DEF!" : "JUMPY DWARF FOXES BLITZ QUICKLY IN A NIGHT VEX!";
-            const STRING2 = isCoverage ? "abc def." : "jumpy dwarf foxes blitz quickly in a night vex.";
-            // reusing characters and hashes from STRING1 and STRING2
-            const STRING3 = isCoverage ? "ABF!" : "INKLY KLARF JUICY QUIG VIC!";
-            const STRING4 = isCoverage ? "abf." : "inkly klarf juicy quig vic.";
-            // reusing characters from STRING1 but novel hashing
-            const STRING5 = isCoverage ? "BAAA!!" : "WOOO!!! LETS GO!!!! MAHOMES BABY!!";
+                // Use shorter strings for coverage
+                const STRING1 = "JUMPY DWARF FOXES BLITZ QUICKLY IN A NIGHT VEX!";
+                const STRING2 = "jumpy dwarf foxes blitz quickly in a night vex.";
+                // reusing characters and hashes from STRING1 and STRING2
+                const STRING3 = "INKLY KLARF JUICY QUIG VIC!";
+                const STRING4 = "inkly klarf juicy quig vic.";
+                // reusing characters from STRING1 but novel hashing
+                const STRING5 = "WOOO!!! LETS GO!!!! MAHOMES BABY!!";
 
-            // Add a hashes2hash
-            const tx1 = await decxDAGContract.press(STRING1);
-            const receipt1 = await tx1.wait();
+                // Add a hashes2hash
+                const tx1 = await decxDAGContract.press(STRING1);
+                const receipt1 = await tx1.wait();
 
-            // Add the same hashes2hash again
-            const tx2 = await decxDAGContract.press(STRING2);
-            const receipt2 = await tx2.wait();
+                // Add the same hashes2hash again
+                const tx2 = await decxDAGContract.press(STRING2);
+                const receipt2 = await tx2.wait();
 
-            // Add a slightly different string
-            const tx3 = await decxDAGContract.press(STRING3);
-            const receipt3 = await tx3.wait();
+                // Add a slightly different string
+                const tx3 = await decxDAGContract.press(STRING3);
+                const receipt3 = await tx3.wait();
 
-            // Add a slightly different string
-            const tx4 = await decxDAGContract.press(STRING4);
-            const receipt4 = await tx4.wait();
+                // Add a slightly different string
+                const tx4 = await decxDAGContract.press(STRING4);
+                const receipt4 = await tx4.wait();
 
-            // Add a slightly different string
-            const tx5 = await decxDAGContract.press(STRING5);
-            const receipt5 = await tx5.wait();
+                // Add a slightly different string
+                const tx5 = await decxDAGContract.press(STRING5);
+                const receipt5 = await tx5.wait();
 
-            // assign the same operation to both receipts
-            receipt1.operation = `novel hashing of "${STRING1}"`;
-            receipt2.operation = `novel hashing of "${STRING2}"`;
-            receipt3.operation = `novel hashing of "${STRING3}"`;
-            receipt4.operation = `novel hashing of "${STRING4}"`;
-            receipt5.operation = `novel hashing of "${STRING5}"`;
-            // print the gas fees
-            await TestUtils.PrintGasFees([receipt1, receipt2, receipt3, receipt4, receipt5]);
+                // assign the same operation to both receipts
+                receipt1.operation = `novel hashing of "${STRING1}"`;
+                receipt2.operation = `novel hashing of "${STRING2}"`;
+                receipt3.operation = `novel hashing of "${STRING3}"`;
+                receipt4.operation = `novel hashing of "${STRING4}"`;
+                receipt5.operation = `novel hashing of "${STRING5}"`;
+                // print the gas fees
+                await TestUtils.PrintGasFees([receipt1, receipt2, receipt3, receipt4, receipt5]);
 
-            // Confirm intuitively that the more novel hashing, the more gas used
-            expect(receipt3.gasUsed).to.be.lessThan(receipt1.gasUsed);
-            expect(receipt4.gasUsed).to.be.lessThan(receipt2.gasUsed);
-            expect(receipt5.gasUsed).to.be.lessThan(receipt1.gasUsed);
-            expect(receipt3.gasUsed).to.be.lessThan(receipt5.gasUsed);
-        });
+                // Confirm intuitively that the more novel hashing, the more gas used
+                expect(receipt3.gasUsed).to.be.lessThan(receipt1.gasUsed);
+                expect(receipt4.gasUsed).to.be.lessThan(receipt2.gasUsed);
+                expect(receipt5.gasUsed).to.be.lessThan(receipt1.gasUsed);
+                expect(receipt3.gasUsed).to.be.lessThan(receipt5.gasUsed);
+            }
+        );
 
-        // This one isn't needed for coverage, but it's a good test to have
+        // Skip extremely long strings gas optimization test during coverage
         (isCoverage ? it.skip : it)("should optimize gas when storing extremely long strings", async function () {
             const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
             const str1 = OLD_MAN1;
