@@ -4,8 +4,11 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { TestUtils } from "./TestUtils";
 
-const OLD_MAN1 = `The old man was thin and gaunt with deep wrinkles in the back of his neck. The brown blotches of the benevolent skin cancer the sun brings from its reflection on the tropic sea were on his cheeks. The blotches ran well down the sides of his face and his hands had the deep-creased scars from handling heavy fish on the cords. But none of these scars were fresh. They were as old as erosions in a fishless desert. Everything about him was old except his eyes and they were the same color as the sea and were cheerful and undefeated.`;
-const OLD_MAN2 = `Santiago, the boy said to him as they climbed the bank from where the skiff was hauled up. I could go with you again. We've made some money. The old man had taught the boy to fish and the boy loved him. No, the old man said. You're with a lucky boat. Stay with them. But remember how you went eighty-seven days without fish and then we caught big ones every day for three weeks. I remember, the old man said. I know you did not leave me because you doubted. It was papa made me leave. I am a boy and I must obey him. I know, the old man said. It is quite normal. He hasn't much faith.  "No," the old man said. "But we have. Haven't we?" "Yes," the boy said. "Can I offer you a beer on the Terrace and then we'll take the stuff home." "Why not?" the old man said. "Between fishermen." They sat on the Terrace and many of the fishermen made fun of the old man and he was not angry. Others, of the older fishermen, looked at him and were sad. But they did not show it and they spoke politely about the current and the depths they had drifted their lines at and the steady good weather and of what they had seen. The successful fishermen of that day were already in and had butchered their marlin out and carried them laid full length across two planks, with two men staggering at the end of each plank, to the fish house where they waited for the ice truck to carry them to the market in Havana. Those who had caught sharks had taken them to the shark factory on the other side of the cove where they were hoisted on a block and tackle, their livers removed, their fins cut off and their hides skinned out and their flesh cut into strips for salting. When the wind was in the east a smell came across the harbour from the shark factory; but today there was only the faint edge of the odour because the wind had backed into the north and then dropped off and it was pleasant and sunny on the Terrace.`;
+const OLD_MAN1 = `The old man was thin and gaunt with deep wrinkles in the back of his neck. The brown blotches of the benevolent skin cancer the sun brings from its reflection on the tropic sea were on his cheeks. The blotches ran well down the sides of his face and his hands had the deep-creased scars from handling heavy fish on the cords. But none of these scars were fresh. They were as old as erosions in a fishless desert. Everything about him was old except his eyes and they were the same color as the sea and were cheerful and undefeated. `;
+const OLD_MAN2 = `Santiago, the boy said to him as they climbed the bank from where the skiff was hauled up. I could go with you again. We've made some money. The old man had taught the boy to fish and the boy loved him. No, the old man said. You're with a lucky boat. Stay with them. But remember how you went eighty-seven days without fish and then we caught big ones every day for three weeks. I remember, the old man said. I know you did not leave me because you doubted. It was papa made me leave. I am a boy and I must obey him. I know, the old man said. `;
+
+// At the top with other constants
+const isCoverage = process.env.COVERAGE === "true";
 
 describe("DecxDAG", function () {
     async function deployDecxDAGFixture() {
@@ -53,7 +56,8 @@ describe("DecxDAG", function () {
         it("should store the same data for the same string in different transactions", async function () {
             const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
 
-            const STRING = "jumpy dwarf foxes blitz quickly in a night vex.";
+            // Use shorter string for coverage
+            const STRING = isCoverage ? "jumpy fox." : "jumpy dwarf foxes blitz quickly in a night vex.";
 
             const tx1 = await decxDAGContract.press(STRING);
             const receipt1 = await tx1.wait();
@@ -69,10 +73,11 @@ describe("DecxDAG", function () {
         it("should store mixed multi-byte and single-byte characters", async function () {
             const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
 
-            const STRING1 = "Hello, world!"; // uses 1 byte for each character
-            const STRING2 = "Hell😀, w😀rld!"; // uses 4 bytes for "😀"
-            const STRING3 = "hello, wörld!"; // uses 2 bytes for "ö"
-            const STRING4 = "Heḹḹợ, woṝḹḑ"; // uses 3 bytes for "ḹ"
+            // Use shorter strings for coverage
+            const STRING1 = isCoverage ? "Hi!" : "Hello, world!";
+            const STRING2 = isCoverage ? "Hi😀!" : "Hell😀, w😀rld!";
+            const STRING3 = isCoverage ? "höla" : "hello, wörld!";
+            const STRING4 = isCoverage ? "Hḹ!" : "Heḹḹợ, woṝḹḑ";
 
             // press strings and verify they don't revert
             await expect(decxDAGContract.press(STRING1)).to.not.be.reverted;
@@ -107,6 +112,18 @@ describe("DecxDAG", function () {
             expect(receipt2.status).to.equal(1);
             expect(receipt3.status).to.equal(1);
             expect(receipt4.status).to.equal(1);
+        });
+
+        it("should handle strings with odd number of characters", async function () {
+            const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
+
+            // Use a string with odd number of characters
+            const STRING = isCoverage ? "abc" : "Hello World"; // 3 or 11 characters
+
+            const tx = await decxDAGContract.press(STRING);
+            const receipt = await tx.wait();
+
+            expect(receipt.status).to.equal(1);
         });
     });
 
@@ -144,13 +161,14 @@ describe("DecxDAG", function () {
         it("should optimize gas usage by avoiding duplicate hashing for longer strings", async function () {
             const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
 
-            const STRING1 = "JUMPY DWARF FOXES BLITZ QUICKLY IN A NIGHT VEX!";
-            const STRING2 = "jumpy dwarf foxes blitz quickly in a night vex.";
+            // Use shorter strings for coverage
+            const STRING1 = isCoverage ? "ABC DEF!" : "JUMPY DWARF FOXES BLITZ QUICKLY IN A NIGHT VEX!";
+            const STRING2 = isCoverage ? "abc def." : "jumpy dwarf foxes blitz quickly in a night vex.";
             // reusing characters and hashes from STRING1 and STRING2
-            const STRING3 = "INKLY KLARF JUICY QUIG VIC!";
-            const STRING4 = "inkly klarf juicy quig vic.";
+            const STRING3 = isCoverage ? "ABF!" : "INKLY KLARF JUICY QUIG VIC!";
+            const STRING4 = isCoverage ? "abf." : "inkly klarf juicy quig vic.";
             // reusing characters from STRING1 but novel hashing
-            const STRING5 = "WOOO!!! LETS GO!!!! MAHOMES BABY!!";
+            const STRING5 = isCoverage ? "BAAA!!" : "WOOO!!! LETS GO!!!! MAHOMES BABY!!";
 
             // Add a hashes2hash
             const tx1 = await decxDAGContract.press(STRING1);
@@ -188,32 +206,69 @@ describe("DecxDAG", function () {
             expect(receipt3.gasUsed).to.be.lessThan(receipt5.gasUsed);
         });
 
-        it("should optimize gas when storing extremely long strings", async function () {
+        // This one isn't needed for coverage, but it's a good test to have
+        (isCoverage ? it.skip : it)("should optimize gas when storing extremely long strings", async function () {
             const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
+            const str1 = OLD_MAN1;
+            const str2 = OLD_MAN2;
 
-            const tx1 = await decxDAGContract.press(OLD_MAN1);
+            const tx1 = await decxDAGContract.press(str1);
             const receipt1 = await tx1.wait();
 
-            receipt1.operation = `novel hashing of 555 characters from "The Old Man and the Sea"`;
+            const tx2 = await decxDAGContract.press(str2);
+            const receipt2 = await tx2.wait();
 
-            // print the gas fees
-            await TestUtils.PrintGasFees([receipt1]);
+            const tx1_2 = await decxDAGContract.press(str1 + str2);
+            const receipt1_2 = await tx1_2.wait();
 
-            // Confirm no additional storage occurred by ensuring the gas cost is minimal
-            expect(receipt1.gasUsed).to.be.greaterThan(1000000);
+            const tx3 = await decxDAGContract.press(str1);
+            const receipt3 = await tx3.wait();
+
+            const tx4 = await decxDAGContract.press(str2);
+            const receipt4 = await tx4.wait();
+
+            const tx3_4 = await decxDAGContract.press(str1 + str2);
+            const receipt3_4 = await tx3_4.wait();
+
+            const tx5 = await decxDAGContract.press(str1);
+            const receipt5 = await tx5.wait();
+
+            const tx6 = await decxDAGContract.press(str2);
+            const receipt6 = await tx6.wait();
+
+            const tx5_6 = await decxDAGContract.press(str1 + str2);
+            const receipt5_6 = await tx5_6.wait();
+
+            // Set operation descriptions
+            receipt1.operation = `1st hashing part 1 (500+ characters)`;
+            receipt2.operation = `1st hashing part 2 (500+ characters)`;
+            receipt1_2.operation = `1st hashing parts 1 and 2 (1000+ characters)`;
+            receipt3.operation = `2nd hashing part 1 (500+ characters)`;
+            receipt4.operation = `2nd hashing part 2 (500+ characters)`;
+            receipt3_4.operation = `2nd hashing parts 1 and 2 (1000+ characters)`;
+            receipt5.operation = `3rd hashing part 1 (500+ characters)`;
+            receipt6.operation = `3rd hashing part 2 (500+ characters)`;
+            receipt5_6.operation = `3rd hashing parts 1 and 2 (1000+ characters)`;
+
+            await TestUtils.PrintGasFees([
+                receipt1,
+                receipt2,
+                receipt1_2,
+                receipt3,
+                receipt4,
+                receipt3_4,
+                receipt5,
+                receipt6,
+                receipt5_6
+            ]);
+
+            // Verify gas optimizations
+            expect(receipt1.gasUsed).to.be.greaterThan(receipt3.gasUsed);
+            expect(receipt2.gasUsed).to.be.greaterThan(receipt4.gasUsed);
+            expect(receipt1_2.gasUsed).to.be.greaterThan(receipt3_4.gasUsed);
+            expect(receipt4.gasUsed).to.be.equal(receipt6.gasUsed);
+            expect(receipt3.gasUsed).to.be.equal(receipt5.gasUsed);
+            expect(receipt3_4.gasUsed).to.be.equal(receipt5_6.gasUsed);
         });
-
-        // THIS TEST IS DISABLED BECAUSE IT TAKES TOO LONG TO RUN AND CAUSES THE CI TO FAIL
-        // UNCOMMENT IT TO RUN IT LOCALLY, BUT BE AWARE THAT IT WILL TAKE THE COVERAGE TESTS TOO LONG TO RUN
-        // EVENTUALLY CAUSING A STACKOVERFLOW ERROR
-        // it("should revert if the string exceeds the gas limit", async function () {
-        //     const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
-
-        //     // Expect the transaction to be reverted with an out of gas error
-        //     await expect(decxDAGContract.press(OLD_MAN1 + " " + OLD_MAN2))
-        //         .to.be.revertedWithoutReason();
-
-        //     // NOTE: maybe one day this will fail due to a change in the gas limit!
-        // });
     });
 });

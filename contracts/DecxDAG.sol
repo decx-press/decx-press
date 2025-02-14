@@ -9,9 +9,6 @@ contract DecxDAG {
 
     Character2Hash private character2Hash;
     Hashes2Hash private hashes2Hash;
-    // state variables
-    uint256 private stringLength;
-    uint256 private charCount;
 
     constructor(address _character2Hash, address _hashes2Hash) {
         character2Hash = Character2Hash(_character2Hash);
@@ -26,17 +23,17 @@ contract DecxDAG {
     /// @return A single 32-byte hash that uniquely represents the entire input string
     function press(string memory input) public returns (bytes32) {
         bytes memory stringBytes = bytes(input);
-        stringLength = stringBytes.length;
+        uint256 stringLength = stringBytes.length;
 
         if (stringLength == 0) {
             revert DecxDAG_EmptyStringNotAllowed();
         }
 
         // Step 1: Convert the string to an array of hashes
-        bytes32[] memory hashes = convertStringToHashes(stringBytes);
+        (bytes32[] memory hashes, uint256 charCount) = convertStringToHashes(stringBytes);
 
         // Step 2: Iteratively merge hashes using Hashes2Hash until a single hash remains
-        bytes32 finalHash = reduceHashes(hashes);
+        bytes32 finalHash = reduceHashes(hashes, charCount);
 
         return finalHash;
     }
@@ -45,29 +42,44 @@ contract DecxDAG {
     /// @dev Properly handles multi-byte UTF-8 characters (like emojis 😀 or accented letters é)
     ///      by detecting the byte length of each character and processing them accordingly.
     /// @param stringBytes The raw bytes of the input string
-    /// @return An array where each element is a hash representing one character from the input
-    function convertStringToHashes(bytes memory stringBytes) private returns (bytes32[] memory) {
-        // Count actual UTF-8 characters
-        // 1 byte: 0xxxxxxx (ie, a, b, c, etc.)
-        // 2 bytes: 110xxxxx 10xxxxxx (ie, ü, é, à, etc.)
-        // 3 bytes: 1110xxxx 10xxxxxx 10xxxxxx (ie, ﬀ, ﬁ, ﬂ, etc.)
-        // 4 bytes: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx (ie, 😀, 🌹, 💩, etc.)
+    /// @return hashes An array where each element is a hash representing one character from the input
+    /// @return charCount The number of UTF-8 characters processed
+    function convertStringToHashes(bytes memory stringBytes) private returns (bytes32[] memory hashes, uint256 charCount) {
+        uint256 stringLength = stringBytes.length;
+        charCount = 0;
+
+        // Count actual UTF-8 characters and validate UTF-8 encoding
         for (uint256 i = 0; i < stringLength;) {
+            // Validate there are enough bytes remaining for the character
+            if ((stringBytes[i] & 0xf8) == 0xf0) {      // 4-byte character
+                if (i + 4 > stringLength) revert("Invalid UTF-8: Incomplete 4-byte sequence");
+                i += 4;
+            }
+            else if ((stringBytes[i] & 0xf0) == 0xe0) { // 3-byte character
+                if (i + 3 > stringLength) revert("Invalid UTF-8: Incomplete 3-byte sequence");
+                i += 3;
+            }
+            else if ((stringBytes[i] & 0xe0) == 0xc0) { // 2-byte character
+                if (i + 2 > stringLength) revert("Invalid UTF-8: Incomplete 2-byte sequence");
+                i += 2;
+            }
+            else if ((stringBytes[i] & 0x80) == 0) {    // 1-byte character
+                i += 1;
+            }
+            else {
+                revert("Invalid UTF-8: Invalid leading byte");
+            }
             charCount++;
-            // Skip the appropriate number of bytes based on UTF-8 encoding
-            if ((stringBytes[i] & 0xf8) == 0xf0) i += 4;      // 4-byte character
-            else if ((stringBytes[i] & 0xf0) == 0xe0) i += 3; // 3-byte character
-            else if ((stringBytes[i] & 0xe0) == 0xc0) i += 2; // 2-byte character
-            else i += 1;                                       // 1-byte character
         }
 
         // Initialize the array of hashes to be processed
-        bytes32[] memory hashes = new bytes32[](charCount);
+        hashes = new bytes32[](charCount);
         uint256 hashIndex = 0;
 
         // Convert characters to hashes
         for (uint256 i = 0; i < stringLength;) {
             uint256 charLen;
+            // We don't need bounds checking here because we validated the string above
             if ((stringBytes[i] & 0xf8) == 0xf0) charLen = 4;      // 4-byte character
             else if ((stringBytes[i] & 0xf0) == 0xe0) charLen = 3; // 3-byte character
             else if ((stringBytes[i] & 0xe0) == 0xc0) charLen = 2; // 2-byte character
@@ -85,47 +97,38 @@ contract DecxDAG {
             hashIndex++;
         }
 
-        return hashes;
+        return (hashes, charCount);
     }
 
     /// @notice Reduces an array of hashes into a single hash using Merkle DAG compression
     /// @dev Implements a bottom-up reduction using pairs of hashes. For odd numbers of hashes,
     ///      the last unpaired hash is promoted to the next level. Continues until only one hash remains.
-    /// @param hashes The array of hashes to be reduced.
-    /// @return The final computed hash.
-    function reduceHashes(bytes32[] memory hashes) private returns (bytes32) {
-        uint256 l = 0;
-        uint256 L = charCount;
+    /// @param hashes The array of hashes to be reduced
+    /// @param length The number of valid hashes in the array
+    /// @return The final computed hash
+    function reduceHashes(bytes32[] memory hashes, uint256 length) private returns (bytes32) {
+        uint256 currentLength = length;
 
-        while (L > 1) {
-            // skip indices that have been processed or are out of bounds
-            if (hashes[l] == bytes32(0) || l > L) {
-                l = 0;
+        while (currentLength > 1) {
+            // Create new array of half size (rounded up)
+            uint256 newLength = (currentLength + 1) / 2;
+            bytes32[] memory newHashes = new bytes32[](newLength);
+
+            // Process pairs
+            for (uint256 i = 0; i + 1 < currentLength; i += 2) {
+                newHashes[i/2] = hashes2Hash.addHashes2Hash([hashes[i], hashes[i + 1]]);
             }
-            // if this is the first pass and it's an odd number of hashes, move the last hash up
-            if (hashes[l + 1] == bytes32(0) && l + 1 < L) {
-                hashes[(l + 1) / 2] = hashes[l];
-                hashes[l] = bytes32(0);
-                // decrement the length
-                L = L - 1;
-                // return the l to the start
-                l = 0;
+
+            // Handle last element if odd length
+            if (currentLength % 2 == 1) {
+                newHashes[newLength - 1] = hashes[currentLength - 1];
             }
-            else {
-                // default case: merge two hashes
-                bytes32 newHash = hashes2Hash.addHashes2Hash([hashes[l], hashes[l + 1]]);
-                // reset the two hashes to null
-                hashes[l] = bytes32(0);
-                hashes[l + 1] = bytes32(0);
-                // store the new hash at the floor
-                hashes[(l + 1) / 2] = newHash;
-                // decrement the length
-                L = L - 1;
-                // increment the index
-                l = l + 2;
-            }
+
+            // Update for next iteration
+            hashes = newHashes;
+            currentLength = newLength;
         }
 
-        return hashes[0]; // The final computed hash
+        return hashes[0];
     }
 }
