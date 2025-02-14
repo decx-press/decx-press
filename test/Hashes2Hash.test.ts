@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import "@nomicfoundation/hardhat-chai-matchers";
-import { TestUtils } from "../TestUtils";
+import { TestUtils } from "./TestUtils";
 
 // Generate characters and their atomic hashes
 const CHAR1 = "a";

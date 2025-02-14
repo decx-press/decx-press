@@ -2,11 +2,10 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import "@nomicfoundation/hardhat-chai-matchers";
-import { TestUtils } from "../TestUtils";
+import { TestUtils } from "./TestUtils";
 
 // Use a single character string for testing
-const CHAR1 = "a";
-const CHAR2 = "b";
+const CHAR = "a";
 const INVALID_HASH_ERROR = "HashRegistry_InvalidHash";
 
 describe("HashRegistry", function () {
@@ -31,17 +30,17 @@ describe("HashRegistry", function () {
     describe("Storage and Lookup", function () {
         it("Should store a single UTF Character", async function () {
             const { hashRegistryContract } = await loadFixture(deployHashRegistryFixture);
-            const hash = TestUtils.GenerateHashFromChar(CHAR1);
+            const hash = TestUtils.GenerateHashFromChar(CHAR);
 
             // Add the Character2Hash unit
-            await hashRegistryContract.addCharacterHash(CHAR1);
+            await hashRegistryContract.addCharacterHash(CHAR);
 
             // Check that the hash exists
             const exists = await hashRegistryContract.isHashPresent(hash);
             expect(exists).to.be.true;
 
             // Check reverse lookup
-            const storedHash = await hashRegistryContract.getHashForCharacter(CHAR1);
+            const storedHash = await hashRegistryContract.getHashForCharacter(CHAR);
             expect(storedHash).to.equal(hash);
         });
 
@@ -49,20 +48,20 @@ describe("HashRegistry", function () {
             const { hashRegistryContract } = await loadFixture(deployHashRegistryFixture);
 
             // Add the first Character2Hash unit
-            await hashRegistryContract.addCharacterHash(CHAR1);
+            await hashRegistryContract.addCharacterHash(CHAR);
 
             // Extract the emitted hash
-            const hash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
+            const hash1 = await hashRegistryContract.getHashForCharacter(CHAR);
 
             // Check that the atomicLookupMapping is not zero for the added character
-            expect(await hashRegistryContract.getHashForCharacter(CHAR1)).to.not.equal(ethers.ZeroHash);
+            expect(await hashRegistryContract.getHashForCharacter(CHAR)).to.not.equal(ethers.ZeroHash);
             expect(hash1).to.not.equal(ethers.ZeroHash); // Ensure the returned hash is also not zero
 
             // Add the same Character2Hash unit again
-            await hashRegistryContract.addCharacterHash(CHAR1);
+            await hashRegistryContract.addCharacterHash(CHAR);
 
             // Extract the returned hash
-            const hash2 = await hashRegistryContract.getHashForCharacter(CHAR1);
+            const hash2 = await hashRegistryContract.getHashForCharacter(CHAR);
 
             // Verify that the hashes are the same
             expect(hash1).to.equal(hash2);
@@ -72,10 +71,10 @@ describe("HashRegistry", function () {
             const { hashRegistryContract } = await loadFixture(deployHashRegistryFixture);
 
             // Add the first Character2Hash unit
-            await hashRegistryContract.addCharacterHash(CHAR1);
+            await hashRegistryContract.addCharacterHash(CHAR);
 
             // Extract the emitted hash
-            const charHash = await hashRegistryContract.getHashForCharacter(CHAR1);
+            const charHash = await hashRegistryContract.getHashForCharacter(CHAR);
 
             await hashRegistryContract.addHashesHash(charHash, charHash);
 
@@ -91,8 +90,8 @@ describe("HashRegistry", function () {
             const { hashRegistryContract } = await loadFixture(deployHashRegistryFixture);
 
             // First add the Character2Hash unit
-            await hashRegistryContract.addCharacterHash(CHAR1);
-            const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
+            await hashRegistryContract.addCharacterHash(CHAR);
+            const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR);
 
             // Create a fake hash that's the right format but not registered in Character2Hash
             const fakeHash = "0x" + "1".repeat(64); // Creates a valid bytes32 hex string
