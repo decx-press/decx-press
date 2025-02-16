@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-contract HashRegistry {
+import "../interfaces/IHashRegistry.sol";
+
+contract HashRegistry is IHashRegistry {
     error HashRegistry_InvalidHash();
 
     mapping(bytes32 => bool) public HashExists;
