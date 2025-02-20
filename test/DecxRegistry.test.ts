@@ -111,5 +111,29 @@ describe("DecxRegistry", function () {
                 INVALID_HASH_ERROR
             );
         });
+
+        it("Should emit ContentEncrypted and EncryptionPathCreated events for a character", async function () {
+            const { hashRegistryContract } = await loadFixture(deployDecxRegistryFixture);
+            const hash = TestUtils.GenerateHashFromChar(CHAR);
+
+            // Call the addCharacterHash function and wait for the transaction receipt
+            const tx = await hashRegistryContract.addCharacterHash(CHAR);
+            const receipt = await tx.wait();
+
+            // Check for ContentEncrypted event
+            const contentEncryptedEvent = receipt.logs.find((log: any) => log.fragment.name === "ContentEncrypted");
+            const [signer] = await ethers.getSigners();
+            expect(contentEncryptedEvent.args.creator).to.equal(await signer.getAddress());
+            expect(contentEncryptedEvent).to.exist; // Ensure the event was emitted
+            expect(contentEncryptedEvent.args.hash).to.equal(hash); // Check the hash argument
+
+            // Check for EncryptionPathCreated event
+            const encryptionPathCreatedEvent = receipt.logs.find(
+                (log: any) => log.fragment.name === "EncryptionPathCreated"
+            );
+            expect(encryptionPathCreatedEvent).to.exist; // Ensure the event was emitted
+            expect(encryptionPathCreatedEvent.args.hash).to.equal(hash); // Check the hash argument
+            expect(encryptionPathCreatedEvent.args.components).to.deep.equal([hash, ethers.ZeroHash]); // Check the components argument
+        });
     });
 });

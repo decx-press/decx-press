@@ -42,18 +42,16 @@ contract DecxRegistry is IDecxRegistry {
         // Hash the character using keccak256
         bytes32 hash = keccak256(abi.encode(character));
 
-        // Only update if the hash is new
-        if (!HashExists[hash]) {
-            HashExists[hash] = true;
-            HashLookup[character] = hash;
+        HashExists[hash] = true;
+        HashLookup[character] = hash;
 
-            // Store dummy encrypted content
-            EncryptedContent[hash] = dummyEncrypt(character, hash);
-            ContentCreator[hash] = msg.sender;
+        // Store dummy encrypted content
+        EncryptedContent[hash] = dummyEncrypt(character, hash);
+        ContentCreator[hash] = msg.sender;
 
-            emit ContentEncrypted(hash, msg.sender);
-            emit EncryptionPathCreated(hash, [hash, 0x0]); // Assuming 0x0 is the default
-        }
+        emit ContentEncrypted(hash, msg.sender);
+        // send in a dummy hash for the second component of the encryption path
+        emit EncryptionPathCreated(hash, [hash, 0x0]);
 
         return hash;
     }
