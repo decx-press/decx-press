@@ -2,12 +2,10 @@
 pragma solidity ^0.8.28;
 
 import "./HashRegistry.sol";
+import "../interfaces/IHashes2Hash.sol";
 
-contract Hashes2Hash {
+contract Hashes2Hash is IHashes2Hash {
     HashRegistry private hashRegistryContract;
-
-    error Hashes2Hash_InvalidArgs();
-    error Hashes2Hash_ZeroHashNotAllowed();
 
     constructor(address _hashRegistryAddress) {
         hashRegistryContract = HashRegistry(_hashRegistryAddress);

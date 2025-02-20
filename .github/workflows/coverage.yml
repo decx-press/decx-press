@@ -12,10 +12,11 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
+          cache: 'npm'
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
       - name: Run Coverage
-        run: npx hardhat coverage --temp coverage
+        run: npm run coverage
       - name: Upload to Codecov
         uses: codecov/codecov-action@v3
         with:

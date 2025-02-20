@@ -14,12 +14,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
+          cache: 'npm'
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Compile Contracts
-        run: npx hardhat compile
+        run: npm run compile
 
       - name: Run Tests
-        run: npx hardhat test
+        run: npm run test:ci

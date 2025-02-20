@@ -91,7 +91,6 @@ pkg/
 *.save
 
 # Lock files
-package-lock.json
 yarn.lock
 
 # Git files

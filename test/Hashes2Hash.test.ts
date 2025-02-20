@@ -2,11 +2,13 @@ import { ethers } from "hardhat";
 import { expect } from "chai";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import "@nomicfoundation/hardhat-chai-matchers";
-import { TestUtils } from "../TestUtils";
+import { TestUtils } from "./TestUtils";
 
 // Generate characters and their atomic hashes
 const CHAR1 = "a";
 const CHAR2 = "b";
+
+const isCoverage = process.env.COVERAGE === "true";
 
 describe("Hashes2Hash", function () {
     // Define a fixture for consistent setup across tests
@@ -93,7 +95,8 @@ describe("Hashes2Hash", function () {
     });
 
     describe("Gas Optimization", function () {
-        it("Should optimize gas usage by avoiding duplicate hashing", async function () {
+        // Skip gas optimization tests during coverage
+        (isCoverage ? it.skip : it)("Should optimize gas usage by avoiding duplicate hashing", async function () {
             const { hashRegistryContract, Hashes2HashContract } = await loadFixture(deployHashes2HashFixture);
 
             // Add Character2Hash units and get their hashes

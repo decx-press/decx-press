@@ -45,7 +45,7 @@ export class TestUtils {
 
         // neatly exit out if we can't get the ETH price so we don't break the test
         if (!ethPrice) {
-            console.warn("Failed to fetch ETH price, likely due to rate limiting. Try again later.");
+            console.warn("🪫 🪫 🪫 Failed to fetch ETH price, likely due to rate limiting. Try again later. 🪫 🪫 🪫");
             return;
         }
 
