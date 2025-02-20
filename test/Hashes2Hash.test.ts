@@ -120,8 +120,8 @@ describe("Hashes2Hash", function () {
             receipt1.operation = `novel hashing of "${CHAR1}${CHAR2}"`;
             receipt2.operation = `hashing attempt of "${CHAR1}${CHAR2}"`;
 
-            // print the gas fees
-            await TestUtils.PrintGasFees([receipt1, receipt2]);
+            // Uncomment to print the gas fees
+            // await TestUtils.PrintGasFees([receipt1, receipt2]);
 
             // Confirm no additional storage occurred by ensuring the gas cost is minimal
             expect(receipt2.gasUsed).to.be.lessThan(receipt1.gasUsed);

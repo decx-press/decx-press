@@ -15,6 +15,25 @@ export class TestUtils {
     }
 
     /**
+     * Split a string into n sections
+     * @param text - The string to split
+     * @param n - The number of sections to split the string into
+     * @returns An array of the sections
+     */
+    static SplitIntoSections(text: string, n: number): string[] {
+        const sectionLength = Math.ceil(text.length / n);
+        const sections: string[] = [];
+
+        for (let i = 0; i < n; i++) {
+            const start = i * sectionLength;
+            const end = start + sectionLength;
+            sections.push(text.slice(start, end));
+        }
+
+        return sections;
+    }
+
+    /**
      * Generate a Character2Hash unit from a string
      * @param str - The single character to generate an hash from
      * @returns The encoded Character2Hash Unit
