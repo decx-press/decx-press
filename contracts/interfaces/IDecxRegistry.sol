@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 interface IDecxRegistry {
+
     /**
         @dev Hash a character and add it to the decxregistry.
         @param character The UTF character to hash.
