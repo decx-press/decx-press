@@ -14,12 +14,12 @@ describe("Character2Hash", function () {
 
     beforeEach(async function () {
         // Get the contract factories
-        const HashRegistry = await ethers.getContractFactory("HashRegistry");
+        const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
         const UTF8Validator = await ethers.getContractFactory("UTF8Validator");
         const Character2Hash = await ethers.getContractFactory("Character2Hash");
 
         // Deploy the contracts
-        hashRegistry = await HashRegistry.deploy();
+        hashRegistry = await DecxRegistry.deploy();
         await hashRegistry.waitForDeployment();
 
         utf8Validator = await UTF8Validator.deploy();
@@ -46,7 +46,7 @@ describe("Character2Hash", function () {
             const tx = await character2Hash.addCharacter2Hash(character);
             const receipt = await tx.wait();
 
-            // Verify the hash is stored in HashRegistry
+            // Verify the hash is stored in DecxRegistry
             const storedHash = await hashRegistry.getHashForCharacter(character);
             expect(storedHash).to.not.equal(ethers.ZeroHash);
         });
@@ -56,7 +56,7 @@ describe("Character2Hash", function () {
             const tx = await character2Hash.addCharacter2Hash(character);
             const receipt = await tx.wait();
 
-            // Verify the hash is stored in HashRegistry
+            // Verify the hash is stored in DecxRegistry
             const storedHash = await hashRegistry.getHashForCharacter(character);
             expect(storedHash).to.not.equal(ethers.ZeroHash);
         });

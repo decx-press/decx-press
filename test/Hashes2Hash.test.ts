@@ -13,11 +13,11 @@ const isCoverage = process.env.COVERAGE === "true";
 describe("Hashes2Hash", function () {
     // Define a fixture for consistent setup across tests
     async function deployHashes2HashFixture() {
-        // First deploy HashRegistry
-        const HashRegistry = await ethers.getContractFactory("HashRegistry");
-        const hashRegistryContract = await HashRegistry.deploy();
+        // First deploy DecxRegistry
+        const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
+        const hashRegistryContract = await DecxRegistry.deploy();
 
-        // Then deploy Hashes2Hash with HashRegistry's address
+        // Then deploy Hashes2Hash with DecxRegistry's address
         const Hashes2Hash = await ethers.getContractFactory("Hashes2Hash");
         const Hashes2HashContract = await Hashes2Hash.deploy(hashRegistryContract.target);
 
@@ -59,7 +59,7 @@ describe("Hashes2Hash", function () {
             );
         });
 
-        it("Should store two hashes in the hash registry", async function () {
+        it("Should store two hashes in the decxregistry", async function () {
             const { hashRegistryContract, Hashes2HashContract } = await loadFixture(deployHashes2HashFixture);
 
             // Add Character2Hash units and get their hashes
@@ -70,7 +70,7 @@ describe("Hashes2Hash", function () {
             const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
             const atomicHash2 = await hashRegistryContract.getHashForCharacter(CHAR2);
 
-            // ensure the hashes are present in the hash registry
+            // ensure the hashes are present in the decxregistry
             expect(await hashRegistryContract.isHashPresent(atomicHash1)).to.be.true;
             expect(await hashRegistryContract.isHashPresent(atomicHash2)).to.be.true;
 
@@ -79,7 +79,7 @@ describe("Hashes2Hash", function () {
             const tx = await Hashes2HashContract.addHashes2Hash(atomicHashes);
             await tx.wait();
 
-            // Get the hash from the hash registry
+            // Get the hash from the decxregistry
             const generatedHash = await hashRegistryContract.getHashForHashes(atomicHash1, atomicHash2);
 
             // Calculate the expected hash the same way the contract does

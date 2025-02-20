@@ -2,7 +2,7 @@ import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 const DecxDAGModule = buildModule("DecxDAGModule", (m) => {
     // Deploy base contracts first
-    const hashRegistry = m.contract("HashRegistry", []);
+    const hashRegistry = m.contract("DecxRegistry", []);
     const utf8Validator = m.contract("UTF8Validator", []);
 
     // Deploy dependent contracts

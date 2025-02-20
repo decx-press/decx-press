@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-interface IHashRegistry {
+interface IDecxRegistry {
     /**
-        @dev Hash a character and add it to the hash registry.
+        @dev Hash a character and add it to the decxregistry.
         @param character The UTF character to hash.
         @return The hash of the character.
     */
     function addCharacterHash(string memory character) external returns (bytes32);
 
     /**
-        @dev Combine two hashes and add the composite hash to the hash registry.
+        @dev Combine two hashes and add the composite hash to the decxregistry.
         @param hash1 The first hash.
         @param hash2 The second hash.
         @return The composite hash of the two hashes.

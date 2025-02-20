@@ -12,8 +12,8 @@ const isCoverage = process.env.COVERAGE === "true";
 
 describe("DecxDAG", function () {
     async function deployDecxDAGFixture() {
-        const HashRegistry = await ethers.getContractFactory("HashRegistry");
-        const hashRegistryContract = await HashRegistry.deploy();
+        const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
+        const hashRegistryContract = await DecxRegistry.deploy();
 
         const UTF8Validator = await ethers.getContractFactory("UTF8Validator");
         const utf8ValidatorContract = await UTF8Validator.deploy();

@@ -6,21 +6,21 @@ import { TestUtils } from "./TestUtils";
 
 // Use a single character string for testing
 const CHAR = "a";
-const INVALID_HASH_ERROR = "HashRegistry_InvalidHash";
+const INVALID_HASH_ERROR = "DecxRegistry_InvalidHash";
 
-describe("HashRegistry", function () {
+describe("DecxRegistry", function () {
     // Define a fixture for consistent setup across tests
-    async function deployHashRegistryFixture() {
-        // First deploy the HashRegistry contract
-        const HashRegistry = await ethers.getContractFactory("HashRegistry");
-        const hashRegistryContract = await HashRegistry.deploy();
+    async function deployDecxRegistryFixture() {
+        // First deploy the DecxRegistry contract
+        const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
+        const hashRegistryContract = await DecxRegistry.deploy();
 
         return { hashRegistryContract };
     }
 
     describe("Deployment", function () {
         it("Should deploy successfully", async function () {
-            const { hashRegistryContract } = await loadFixture(deployHashRegistryFixture);
+            const { hashRegistryContract } = await loadFixture(deployDecxRegistryFixture);
 
             // Check that the contract has a valid address
             expect(hashRegistryContract.target).to.be.properAddress;
@@ -29,7 +29,7 @@ describe("HashRegistry", function () {
 
     describe("Storage and Lookup", function () {
         it("Should store a single UTF Character", async function () {
-            const { hashRegistryContract } = await loadFixture(deployHashRegistryFixture);
+            const { hashRegistryContract } = await loadFixture(deployDecxRegistryFixture);
             const hash = TestUtils.GenerateHashFromChar(CHAR);
 
             // Add the Character2Hash unit
@@ -45,7 +45,7 @@ describe("HashRegistry", function () {
         });
 
         it("Should return the existing hash for duplicate Character2Hash Units", async function () {
-            const { hashRegistryContract } = await loadFixture(deployHashRegistryFixture);
+            const { hashRegistryContract } = await loadFixture(deployDecxRegistryFixture);
 
             // Add the first Character2Hash unit
             await hashRegistryContract.addCharacterHash(CHAR);
@@ -68,7 +68,7 @@ describe("HashRegistry", function () {
         });
 
         it("Should return the existing hash for duplicate Hashes2Hash Units", async function () {
-            const { hashRegistryContract } = await loadFixture(deployHashRegistryFixture);
+            const { hashRegistryContract } = await loadFixture(deployDecxRegistryFixture);
 
             // Add the first Character2Hash unit
             await hashRegistryContract.addCharacterHash(CHAR);
@@ -87,7 +87,7 @@ describe("HashRegistry", function () {
         });
 
         it("Should not allow invalid hash pairs", async function () {
-            const { hashRegistryContract } = await loadFixture(deployHashRegistryFixture);
+            const { hashRegistryContract } = await loadFixture(deployDecxRegistryFixture);
 
             // First add the Character2Hash unit
             await hashRegistryContract.addCharacterHash(CHAR);

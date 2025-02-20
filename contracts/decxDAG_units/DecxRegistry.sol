@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import "../interfaces/IHashRegistry.sol";
+import "../interfaces/IDecxRegistry.sol";
 
-contract HashRegistry is IHashRegistry {
-    error HashRegistry_InvalidHash();
+contract DecxRegistry is IDecxRegistry {
+    error DecxRegistry_InvalidHash();
 
     mapping(bytes32 => bool) public HashExists;
     mapping(string => bytes32) public HashLookup;
     mapping(bytes32 => bytes32) public HashesLookup;
 
     /**
-        @dev Hash a character and add it to the hash registry.
+        @dev Hash a character and add it to the decxregistry.
         @param character The UTF character to hash.
         @return The hash of the character.
     */
@@ -33,7 +33,7 @@ contract HashRegistry is IHashRegistry {
     }
 
     /**
-        @dev Combine two hashes and add the composite hash to the hash registry.
+        @dev Combine two hashes and add the composite hash to the decxregistry.
         @param hash1 The first hash.
         @param hash2 The second hash.
         @return The composite hash of the two hashes.
@@ -41,7 +41,7 @@ contract HashRegistry is IHashRegistry {
     function addHashesHash(bytes32 hash1, bytes32 hash2) public returns (bytes32) {
         // ensure both hashes exist before proceeding
         if (!isHashPresent(hash1) || !isHashPresent(hash2)) {
-            revert HashRegistry_InvalidHash();
+            revert DecxRegistry_InvalidHash();
         }
 
         // Encode once and use for both keys
