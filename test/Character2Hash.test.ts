@@ -97,8 +97,9 @@ describe("Character2Hash", function () {
             receipt1.operation = `novel hashing of "${character}"`;
             receipt2.operation = `hashing attempt of "${character}"`;
 
-            // Uncomment to print the gas fees
-            // await TestUtils.PrintGasFees([receipt1, receipt2]);
+            if (process.env.PRINT_FEES === "true") {
+                await TestUtils.PrintGasFees([receipt1, receipt2]);
+            }
 
             expect(receipt2.gasUsed).to.be.lessThan(receipt1.gasUsed);
         });

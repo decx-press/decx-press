@@ -97,6 +97,19 @@ Run your tests using Hardhat’s test runner:
 > npm run test # defined in package.json under 'scripts'
 > ```
 
+If you want to run the tests with gas fees printed, run:
+
+> ```bash
+> npm run test:fees # defined in package.json under 'scripts'
+> ```
+
+If you want to run the tests for CI, run:
+
+> ```bash
+> npm run test:ci # defined in package.json under 'scripts'
+> ```
+
+
 #### 7. Check Test Coverage
 
 Check the test coverage of your contracts:

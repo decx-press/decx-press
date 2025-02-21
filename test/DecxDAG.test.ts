@@ -163,8 +163,9 @@ describe("DecxDAG", function () {
             receipt2.operation = `hashing attempt of "${STRING1}"`;
             receipt3.operation = `hashing attempt of "${STRING2}"`;
 
-            // Uncomment to print the gas fees
-            // await TestUtils.PrintGasFees([receipt1, receipt2, receipt3]);
+            if (process.env.PRINT_FEES === "true") {
+                await TestUtils.PrintGasFees([receipt1, receipt2, receipt3]);
+            }
 
             // Confirm no additional storage occurred by ensuring the gas cost is minimal
             expect(receipt2.gasUsed).to.be.lessThan(receipt1.gasUsed);
@@ -212,8 +213,9 @@ describe("DecxDAG", function () {
                 receipt4.operation = `novel hashing of "${STRING4}"`;
                 receipt5.operation = `novel hashing of "${STRING5}"`;
 
-                // Uncomment to print the gas fees
-                // await TestUtils.PrintGasFees([receipt1, receipt2, receipt3, receipt4, receipt5]);
+                if (process.env.PRINT_FEES === "true") {
+                    await TestUtils.PrintGasFees([receipt1, receipt2, receipt3, receipt4, receipt5]);
+                }
 
                 // Confirm intuitively that the more novel hashing, the more gas used
                 expect(receipt3.gasUsed).to.be.lessThan(receipt1.gasUsed);
@@ -266,8 +268,9 @@ describe("DecxDAG", function () {
                     sectionCount = currentSections.length; // Update the section count
                 }
 
-                // Uncomment to print the gas fees for the combinations
-                // await TestUtils.PrintGasFees(receipts);
+                if (process.env.PRINT_FEES === "true") {
+                    await TestUtils.PrintGasFees(receipts);
+                }
 
                 // Print the total gas used for the final combination
                 expect(totalGasUsed).to.be.greaterThan(BigInt(gasLimit));
