@@ -4,7 +4,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { TestUtils } from "./TestUtils";
 
-const OLD_MAN1 = `The old man was thin and gaunt with deep wrinkles in the back of his neck. The brown blotches of the benevolent skin cancer the sun brings from its reflection on the tropic sea were on his cheeks. The blotches ran well down the sides of his face and his hands had the deep-creased scars from handling heavy fish on the cords. But none of these scars were fresh. They were as old as erosions in a fishless desert. Everything about him was old except his eyes and they were the same color as the sea and were cheerful and undefeated. `;
+const OLD_MAN = `The old man was thin and gaunt with deep wrinkles in the back of his neck. The brown blotches of the benevolent skin cancer the sun brings from its reflection on the tropic sea were on his cheeks. The blotches ran well down the sides of his face and his hands had the deep-creased scars from handling heavy fish on the cords. But none of these scars were fresh. They were as old as erosions in a fishless desert. Everything about him was old except his eyes and they were the same color as the sea and were cheerful and undefeated. `;
 
 // At the top with other constants
 const isCoverage = process.env.COVERAGE === "true";
@@ -230,7 +230,7 @@ describe("DecxDAG", function () {
             "should be able to bypass the 100k gas limit by incrementally building long strings",
             async function () {
                 const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
-                const sections = TestUtils.SplitIntoSections(OLD_MAN1, 30); // Split OLD_MAN1 into 30 sections
+                const sections = TestUtils.SplitIntoSections(OLD_MAN, 30); // Split OLD_MAN into 30 sections
                 const gasLimit = 1000000;
                 const receipts: any[] = [];
                 let totalGasUsed = BigInt(0); // Use BigInt for total gas used

@@ -139,11 +139,11 @@ describe("DecxRegistry", function () {
 
         it("Should store encryption for a single character correctly", async function () {
             const { decxRegistryContract } = await loadFixture(deployDecxRegistryFixture);
-            const expectedHash = TestUtils.GenerateHashFromChar(CHAR); // Assuming this generates the expected hash
+            const expectedHash = TestUtils.GenerateHashFromChar(CHAR);
             const encryption = TestUtils.EncryptContent(CHAR, expectedHash);
 
             // Call the function that stores the dummy encryption
-            await decxRegistryContract.addCharacterHash(CHAR); // Assuming this function also stores the dummy encryption
+            await decxRegistryContract.addCharacterHash(CHAR);
 
             // Retrieve the stored encryption
             const storedEncryption = await decxRegistryContract.EncryptedContent(expectedHash);
