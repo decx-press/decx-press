@@ -7,11 +7,11 @@ import "../interfaces/ICharacter2Hash.sol";
 
 contract Character2Hash is ICharacter2Hash {
 
-    DecxRegistry private hashRegistry;
+    DecxRegistry private decxRegistry;
     IUTF8Validator private utf8Validator;
 
-    constructor(address _hashRegistryAddress, address _utf8ValidatorAddress) {
-        hashRegistry = DecxRegistry(_hashRegistryAddress);
+    constructor(address _decxRegistryAddress, address _utf8ValidatorAddress) {
+        decxRegistry = DecxRegistry(_decxRegistryAddress);
         utf8Validator = IUTF8Validator(_utf8ValidatorAddress);
     }
 
@@ -25,7 +25,7 @@ contract Character2Hash is ICharacter2Hash {
         utf8Validator.validateCharacter(character);
 
         // Use the decxregistry to add the character and get the hash
-        bytes32 hash = hashRegistry.addCharacterHash(character);
+        bytes32 hash = decxRegistry.addCharacterHash(character);
 
         return hash;
     }

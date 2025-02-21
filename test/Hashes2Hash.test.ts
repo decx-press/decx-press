@@ -15,13 +15,13 @@ describe("Hashes2Hash", function () {
     async function deployHashes2HashFixture() {
         // First deploy DecxRegistry
         const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
-        const hashRegistryContract = await DecxRegistry.deploy();
+        const decxRegistryContract = await DecxRegistry.deploy();
 
         // Then deploy Hashes2Hash with DecxRegistry's address
         const Hashes2Hash = await ethers.getContractFactory("Hashes2Hash");
-        const Hashes2HashContract = await Hashes2Hash.deploy(hashRegistryContract.target);
+        const Hashes2HashContract = await Hashes2Hash.deploy(decxRegistryContract.target);
 
-        return { hashRegistryContract, Hashes2HashContract };
+        return { decxRegistryContract, Hashes2HashContract };
     }
 
     describe("Deployment", function () {
@@ -35,9 +35,9 @@ describe("Hashes2Hash", function () {
 
     describe("Storage and Lookup", function () {
         it("should reject zero hash", async function () {
-            const { Hashes2HashContract, hashRegistryContract } = await loadFixture(deployHashes2HashFixture);
-            await hashRegistryContract.addCharacterHash(CHAR1);
-            const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
+            const { Hashes2HashContract, decxRegistryContract } = await loadFixture(deployHashes2HashFixture);
+            await decxRegistryContract.addCharacterHash(CHAR1);
+            const atomicHash1 = await decxRegistryContract.getHashForCharacter(CHAR1);
             const zeroHash = ethers.ZeroHash;
 
             // expect the first hash to be rejected
@@ -60,19 +60,19 @@ describe("Hashes2Hash", function () {
         });
 
         it("Should store two hashes in the decxregistry", async function () {
-            const { hashRegistryContract, Hashes2HashContract } = await loadFixture(deployHashes2HashFixture);
+            const { decxRegistryContract, Hashes2HashContract } = await loadFixture(deployHashes2HashFixture);
 
             // Add Character2Hash units and get their hashes
-            await hashRegistryContract.addCharacterHash(CHAR1);
-            await hashRegistryContract.addCharacterHash(CHAR2);
+            await decxRegistryContract.addCharacterHash(CHAR1);
+            await decxRegistryContract.addCharacterHash(CHAR2);
 
             // Get the hashes
-            const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
-            const atomicHash2 = await hashRegistryContract.getHashForCharacter(CHAR2);
+            const atomicHash1 = await decxRegistryContract.getHashForCharacter(CHAR1);
+            const atomicHash2 = await decxRegistryContract.getHashForCharacter(CHAR2);
 
             // ensure the hashes are present in the decxregistry
-            expect(await hashRegistryContract.isHashPresent(atomicHash1)).to.be.true;
-            expect(await hashRegistryContract.isHashPresent(atomicHash2)).to.be.true;
+            expect(await decxRegistryContract.isHashPresent(atomicHash1)).to.be.true;
+            expect(await decxRegistryContract.isHashPresent(atomicHash2)).to.be.true;
 
             // Add the it to the hashes2hash and wait for the transaction
             const atomicHashes = [atomicHash1, atomicHash2];
@@ -80,7 +80,7 @@ describe("Hashes2Hash", function () {
             await tx.wait();
 
             // Get the hash from the decxregistry
-            const generatedHash = await hashRegistryContract.getHashForHashes(atomicHash1, atomicHash2);
+            const generatedHash = await decxRegistryContract.getHashForHashes(atomicHash1, atomicHash2);
 
             // Calculate the expected hash the same way the contract does
             const expectedHash = TestUtils.GenerateHashFromHashes(atomicHashes);
@@ -89,7 +89,7 @@ describe("Hashes2Hash", function () {
             expect(generatedHash).to.equal(expectedHash);
 
             // Check that the hash exists
-            const exists = await hashRegistryContract.isHashPresent(expectedHash);
+            const exists = await decxRegistryContract.isHashPresent(expectedHash);
             expect(exists).to.be.true;
         });
     });
@@ -97,15 +97,15 @@ describe("Hashes2Hash", function () {
     describe("Gas Optimization", function () {
         // Skip gas optimization tests during coverage
         (isCoverage ? it.skip : it)("Should optimize gas usage by avoiding duplicate hashing", async function () {
-            const { hashRegistryContract, Hashes2HashContract } = await loadFixture(deployHashes2HashFixture);
+            const { decxRegistryContract, Hashes2HashContract } = await loadFixture(deployHashes2HashFixture);
 
             // Add Character2Hash units and get their hashes
-            await hashRegistryContract.addCharacterHash(CHAR1);
-            await hashRegistryContract.addCharacterHash(CHAR2);
+            await decxRegistryContract.addCharacterHash(CHAR1);
+            await decxRegistryContract.addCharacterHash(CHAR2);
 
             // Get the actual Character2Hash unit hashes using getHashForCharacter
-            const atomicHash1 = await hashRegistryContract.getHashForCharacter(CHAR1);
-            const atomicHash2 = await hashRegistryContract.getHashForCharacter(CHAR2);
+            const atomicHash1 = await decxRegistryContract.getHashForCharacter(CHAR1);
+            const atomicHash2 = await decxRegistryContract.getHashForCharacter(CHAR2);
             const atomicHashes = [atomicHash1, atomicHash2];
 
             // Add a hashes2hash

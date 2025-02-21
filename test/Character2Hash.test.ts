@@ -9,7 +9,7 @@ const isCoverage = process.env.COVERAGE === "true";
 
 describe("Character2Hash", function () {
     let character2Hash: Contract;
-    let hashRegistry: Contract;
+    let decxRegistry: Contract;
     let utf8Validator: Contract;
 
     beforeEach(async function () {
@@ -19,18 +19,18 @@ describe("Character2Hash", function () {
         const Character2Hash = await ethers.getContractFactory("Character2Hash");
 
         // Deploy the contracts
-        hashRegistry = await DecxRegistry.deploy();
-        await hashRegistry.waitForDeployment();
+        decxRegistry = await DecxRegistry.deploy();
+        await decxRegistry.waitForDeployment();
 
         utf8Validator = await UTF8Validator.deploy();
         await utf8Validator.waitForDeployment();
 
         // Get the deployed addresses
-        const hashRegistryAddress = await hashRegistry.getAddress();
+        const decxRegistryAddress = await decxRegistry.getAddress();
         const utf8ValidatorAddress = await utf8Validator.getAddress();
 
         // Deploy main contract with the correct addresses
-        character2Hash = await Character2Hash.deploy(hashRegistryAddress, utf8ValidatorAddress);
+        character2Hash = await Character2Hash.deploy(decxRegistryAddress, utf8ValidatorAddress);
         await character2Hash.waitForDeployment();
     });
 
@@ -47,7 +47,7 @@ describe("Character2Hash", function () {
             const receipt = await tx.wait();
 
             // Verify the hash is stored in DecxRegistry
-            const storedHash = await hashRegistry.getHashForCharacter(character);
+            const storedHash = await decxRegistry.getHashForCharacter(character);
             expect(storedHash).to.not.equal(ethers.ZeroHash);
         });
 
@@ -57,7 +57,7 @@ describe("Character2Hash", function () {
             const receipt = await tx.wait();
 
             // Verify the hash is stored in DecxRegistry
-            const storedHash = await hashRegistry.getHashForCharacter(character);
+            const storedHash = await decxRegistry.getHashForCharacter(character);
             expect(storedHash).to.not.equal(ethers.ZeroHash);
         });
 

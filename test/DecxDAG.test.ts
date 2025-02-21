@@ -5,7 +5,6 @@ import { ethers } from "hardhat";
 import { TestUtils } from "./TestUtils";
 
 const OLD_MAN1 = `The old man was thin and gaunt with deep wrinkles in the back of his neck. The brown blotches of the benevolent skin cancer the sun brings from its reflection on the tropic sea were on his cheeks. The blotches ran well down the sides of his face and his hands had the deep-creased scars from handling heavy fish on the cords. But none of these scars were fresh. They were as old as erosions in a fishless desert. Everything about him was old except his eyes and they were the same color as the sea and were cheerful and undefeated. `;
-const OLD_MAN2 = `Santiago, the boy said to him as they climbed the bank from where the skiff was hauled up. I could go with you again. We've made some money. The old man had taught the boy to fish and the boy loved him. No, the old man said. You're with a lucky boat. Stay with them. But remember how you went eighty-seven days without fish and then we caught big ones every day for three weeks. I remember, the old man said. I know you did not leave me because you doubted. It was papa made me leave. I am a boy and I must obey him. I know, the old man said. `;
 
 // At the top with other constants
 const isCoverage = process.env.COVERAGE === "true";
@@ -13,24 +12,24 @@ const isCoverage = process.env.COVERAGE === "true";
 describe("DecxDAG", function () {
     async function deployDecxDAGFixture() {
         const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
-        const hashRegistryContract = await DecxRegistry.deploy();
+        const decxRegistryContract = await DecxRegistry.deploy();
 
         const UTF8Validator = await ethers.getContractFactory("UTF8Validator");
         const utf8ValidatorContract = await UTF8Validator.deploy();
 
         const Character2Hash = await ethers.getContractFactory("Character2Hash");
         const character2HashContract = await Character2Hash.deploy(
-            hashRegistryContract.target,
+            decxRegistryContract.target,
             utf8ValidatorContract.target
         );
 
         const Hashes2Hash = await ethers.getContractFactory("Hashes2Hash");
-        const hashes2HashContract = await Hashes2Hash.deploy(hashRegistryContract.target);
+        const hashes2HashContract = await Hashes2Hash.deploy(decxRegistryContract.target);
 
         const DecxDAG = await ethers.getContractFactory("DecxDAG");
         const decxDAGContract = await DecxDAG.deploy(character2HashContract.target, hashes2HashContract.target);
 
-        return { decxDAGContract, character2HashContract, hashes2HashContract, hashRegistryContract };
+        return { decxDAGContract, character2HashContract, hashes2HashContract, decxRegistryContract };
     }
 
     describe("Deployment", function () {
@@ -230,6 +229,7 @@ describe("DecxDAG", function () {
             async function () {
                 const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
                 const sections = TestUtils.SplitIntoSections(OLD_MAN1, 30); // Split OLD_MAN1 into 30 sections
+                const gasLimit = 1000000;
                 const receipts: any[] = [];
                 let totalGasUsed = BigInt(0); // Use BigInt for total gas used
 
@@ -270,7 +270,7 @@ describe("DecxDAG", function () {
                 // await TestUtils.PrintGasFees(receipts);
 
                 // Print the total gas used for the final combination
-                expect(totalGasUsed).to.be.greaterThan(BigInt(1000000));
+                expect(totalGasUsed).to.be.greaterThan(BigInt(gasLimit));
             }
         );
     });

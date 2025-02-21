@@ -54,6 +54,19 @@ export class TestUtils {
     }
 
     /**
+     * Encrypt content using a key
+     * @dev This is a dummy function for testing purposes until we have a real off-chain encryption function.
+     *      It is not secure and should not be used in production and should be replaced when we have a real
+     *      off-chain encryption function.
+     * @param content - The content to encrypt
+     * @param key - The key to encrypt the content with
+     * @returns The encrypted content
+     */
+    static EncryptContent(content: string, key: string) {
+        return AbiCoder.defaultAbiCoder().encode(["string", "bytes32"], [content, key]);
+    }
+
+    /**
      * Calculates gas fees for an array of receipts
      * @param receipt - An array of receipts
      * @returns Void, prints a console table with the gas fees & USD conversion

@@ -5,10 +5,10 @@ import "./DecxRegistry.sol";
 import "../interfaces/IHashes2Hash.sol";
 
 contract Hashes2Hash is IHashes2Hash {
-    DecxRegistry private hashRegistryContract;
+    DecxRegistry private decxRegistryContract;
 
-    constructor(address _hashRegistryAddress) {
-        hashRegistryContract = DecxRegistry(_hashRegistryAddress);
+    constructor(address _decxRegistryAddress) {
+        decxRegistryContract = DecxRegistry(_decxRegistryAddress);
     }
 
     ///   @notice Add a Hashes2Hash unit to the contract.
@@ -21,7 +21,7 @@ contract Hashes2Hash is IHashes2Hash {
         }
 
         // and send it to the decxregistry for storage
-        bytes32 hash = hashRegistryContract.addHashesHash(hashArray[0], hashArray[1]);
+        bytes32 hash = decxRegistryContract.addHashesHash(hashArray[0], hashArray[1]);
 
         return hash;
     }

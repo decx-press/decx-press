@@ -48,6 +48,7 @@ describe("UTF8Validator", function () {
             await expect(utf8ValidatorContract.validateCharacter("🚀")).to.not.be.reverted; // 4-byte
         });
 
+        // TODO: Remove this test? We do it in the prior test
         it("Should verify 2-byte character length", async function () {
             const { utf8ValidatorContract } = await loadFixture(deployUTF8ValidatorFixture);
             const twoByteChar = "é";
