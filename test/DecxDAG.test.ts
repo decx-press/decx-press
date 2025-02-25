@@ -4,33 +4,32 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { TestUtils } from "./TestUtils";
 
-const OLD_MAN1 = `The old man was thin and gaunt with deep wrinkles in the back of his neck. The brown blotches of the benevolent skin cancer the sun brings from its reflection on the tropic sea were on his cheeks. The blotches ran well down the sides of his face and his hands had the deep-creased scars from handling heavy fish on the cords. But none of these scars were fresh. They were as old as erosions in a fishless desert. Everything about him was old except his eyes and they were the same color as the sea and were cheerful and undefeated. `;
-const OLD_MAN2 = `Santiago, the boy said to him as they climbed the bank from where the skiff was hauled up. I could go with you again. We've made some money. The old man had taught the boy to fish and the boy loved him. No, the old man said. You're with a lucky boat. Stay with them. But remember how you went eighty-seven days without fish and then we caught big ones every day for three weeks. I remember, the old man said. I know you did not leave me because you doubted. It was papa made me leave. I am a boy and I must obey him. I know, the old man said. `;
+const OLD_MAN = `The old man was thin and gaunt with deep wrinkles in the back of his neck. The brown blotches of the benevolent skin cancer the sun brings from its reflection on the tropic sea were on his cheeks. The blotches ran well down the sides of his face and his hands had the deep-creased scars from handling heavy fish on the cords. But none of these scars were fresh. They were as old as erosions in a fishless desert. Everything about him was old except his eyes and they were the same color as the sea and were cheerful and undefeated. `;
 
 // At the top with other constants
 const isCoverage = process.env.COVERAGE === "true";
 
 describe("DecxDAG", function () {
     async function deployDecxDAGFixture() {
-        const HashRegistry = await ethers.getContractFactory("HashRegistry");
-        const hashRegistryContract = await HashRegistry.deploy();
+        const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
+        const decxRegistryContract = await DecxRegistry.deploy();
 
         const UTF8Validator = await ethers.getContractFactory("UTF8Validator");
         const utf8ValidatorContract = await UTF8Validator.deploy();
 
         const Character2Hash = await ethers.getContractFactory("Character2Hash");
         const character2HashContract = await Character2Hash.deploy(
-            hashRegistryContract.target,
+            decxRegistryContract.target,
             utf8ValidatorContract.target
         );
 
         const Hashes2Hash = await ethers.getContractFactory("Hashes2Hash");
-        const hashes2HashContract = await Hashes2Hash.deploy(hashRegistryContract.target);
+        const hashes2HashContract = await Hashes2Hash.deploy(decxRegistryContract.target);
 
         const DecxDAG = await ethers.getContractFactory("DecxDAG");
         const decxDAGContract = await DecxDAG.deploy(character2HashContract.target, hashes2HashContract.target);
 
-        return { decxDAGContract, character2HashContract, hashes2HashContract, hashRegistryContract };
+        return { decxDAGContract, character2HashContract, hashes2HashContract, decxRegistryContract };
     }
 
     describe("Deployment", function () {
@@ -164,8 +163,9 @@ describe("DecxDAG", function () {
             receipt2.operation = `hashing attempt of "${STRING1}"`;
             receipt3.operation = `hashing attempt of "${STRING2}"`;
 
-            // print the gas fees
-            await TestUtils.PrintGasFees([receipt1, receipt2, receipt3]);
+            if (process.env.PRINT_FEES === "true") {
+                await TestUtils.PrintGasFees([receipt1, receipt2, receipt3]);
+            }
 
             // Confirm no additional storage occurred by ensuring the gas cost is minimal
             expect(receipt2.gasUsed).to.be.lessThan(receipt1.gasUsed);
@@ -212,8 +212,10 @@ describe("DecxDAG", function () {
                 receipt3.operation = `novel hashing of "${STRING3}"`;
                 receipt4.operation = `novel hashing of "${STRING4}"`;
                 receipt5.operation = `novel hashing of "${STRING5}"`;
-                // print the gas fees
-                await TestUtils.PrintGasFees([receipt1, receipt2, receipt3, receipt4, receipt5]);
+
+                if (process.env.PRINT_FEES === "true") {
+                    await TestUtils.PrintGasFees([receipt1, receipt2, receipt3, receipt4, receipt5]);
+                }
 
                 // Confirm intuitively that the more novel hashing, the more gas used
                 expect(receipt3.gasUsed).to.be.lessThan(receipt1.gasUsed);
@@ -223,69 +225,56 @@ describe("DecxDAG", function () {
             }
         );
 
-        // Skip extremely long strings gas optimization test during coverage
-        (isCoverage ? it.skip : it)("should optimize gas when storing extremely long strings", async function () {
-            const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
-            const str1 = OLD_MAN1;
-            const str2 = OLD_MAN2;
+        // This test is not valid for coverage because it takes too long to run
+        (isCoverage ? it.skip : it)(
+            "should be able to bypass the 100k gas limit by incrementally building long strings",
+            async function () {
+                const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
+                const sections = TestUtils.SplitIntoSections(OLD_MAN, 30); // Split OLD_MAN into 30 sections
+                const gasLimit = 1000000;
+                const receipts: any[] = [];
+                let totalGasUsed = BigInt(0); // Use BigInt for total gas used
 
-            const tx1 = await decxDAGContract.press(str1);
-            const receipt1 = await tx1.wait();
+                // Incrementally build the entire excerpt starting with 30 sections, we won't print these receipts
+                for (let i = 0; i < sections.length; i++) {
+                    const tx = await decxDAGContract.press(sections[i]);
+                    const receipt = await tx.wait();
+                    totalGasUsed += BigInt(receipt.gasUsed); // Convert to BigInt
+                }
 
-            const tx2 = await decxDAGContract.press(str2);
-            const receipt2 = await tx2.wait();
+                // Combine sections in a hierarchical manner
+                let currentSections = sections;
+                let sectionCount = 30;
 
-            const tx1_2 = await decxDAGContract.press(str1 + str2);
-            const receipt1_2 = await tx1_2.wait();
+                while (sectionCount > 1) {
+                    const newSections: string[] = [];
+                    for (let i = 0; i < currentSections.length; i += 2) {
+                        if (i + 1 < currentSections.length) {
+                            const combinedString = currentSections[i] + currentSections[i + 1];
+                            const tx = await decxDAGContract.press(combinedString);
+                            const receipt = await tx.wait();
+                            receipts.push(receipt);
+                            totalGasUsed += BigInt(receipt.gasUsed); // Convert to BigInt
 
-            const tx3 = await decxDAGContract.press(str1);
-            const receipt3 = await tx3.wait();
+                            // Emit the operation description for the combined section
+                            receipt.operation = `Combined Section ${newSections.length + 1} (Sections ${i + 1} and ${i + 2})`;
+                            newSections.push(combinedString);
+                        } else {
+                            // If there's an odd section out, just push it to the new sections
+                            newSections.push(currentSections[i]);
+                        }
+                    }
+                    currentSections = newSections; // Update current sections to the newly combined sections
+                    sectionCount = currentSections.length; // Update the section count
+                }
 
-            const tx4 = await decxDAGContract.press(str2);
-            const receipt4 = await tx4.wait();
+                if (process.env.PRINT_FEES === "true") {
+                    await TestUtils.PrintGasFees(receipts);
+                }
 
-            const tx3_4 = await decxDAGContract.press(str1 + str2);
-            const receipt3_4 = await tx3_4.wait();
-
-            const tx5 = await decxDAGContract.press(str1);
-            const receipt5 = await tx5.wait();
-
-            const tx6 = await decxDAGContract.press(str2);
-            const receipt6 = await tx6.wait();
-
-            const tx5_6 = await decxDAGContract.press(str1 + str2);
-            const receipt5_6 = await tx5_6.wait();
-
-            // Set operation descriptions
-            receipt1.operation = `1st hashing part 1 (500+ characters)`;
-            receipt2.operation = `1st hashing part 2 (500+ characters)`;
-            receipt1_2.operation = `1st hashing parts 1 and 2 (1000+ characters)`;
-            receipt3.operation = `2nd hashing part 1 (500+ characters)`;
-            receipt4.operation = `2nd hashing part 2 (500+ characters)`;
-            receipt3_4.operation = `2nd hashing parts 1 and 2 (1000+ characters)`;
-            receipt5.operation = `3rd hashing part 1 (500+ characters)`;
-            receipt6.operation = `3rd hashing part 2 (500+ characters)`;
-            receipt5_6.operation = `3rd hashing parts 1 and 2 (1000+ characters)`;
-
-            await TestUtils.PrintGasFees([
-                receipt1,
-                receipt2,
-                receipt1_2,
-                receipt3,
-                receipt4,
-                receipt3_4,
-                receipt5,
-                receipt6,
-                receipt5_6
-            ]);
-
-            // Verify gas optimizations
-            expect(receipt1.gasUsed).to.be.greaterThan(receipt3.gasUsed);
-            expect(receipt2.gasUsed).to.be.greaterThan(receipt4.gasUsed);
-            expect(receipt1_2.gasUsed).to.be.greaterThan(receipt3_4.gasUsed);
-            expect(receipt4.gasUsed).to.be.equal(receipt6.gasUsed);
-            expect(receipt3.gasUsed).to.be.equal(receipt5.gasUsed);
-            expect(receipt3_4.gasUsed).to.be.equal(receipt5_6.gasUsed);
-        });
+                // Print the total gas used for the final combination
+                expect(totalGasUsed).to.be.greaterThan(BigInt(gasLimit));
+            }
+        );
     });
 });

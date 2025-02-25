@@ -11,6 +11,7 @@
         "compile": "hardhat compile",
         "test": "hardhat test",
         "test:ci": "cross-env COVERAGE=true hardhat test",
+        "test:fees": "cross-env PRINT_FEES=true hardhat test",
         "deploy": "hardhat ignition deploy ignition/modules/$npm_config_module.ts --network $npm_config_network",
         "coverage": "cross-env COVERAGE=true hardhat coverage",
         "console": "hardhat console --network localhost",

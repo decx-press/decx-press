@@ -15,6 +15,25 @@ export class TestUtils {
     }
 
     /**
+     * Split a string into n sections
+     * @param text - The string to split
+     * @param n - The number of sections to split the string into
+     * @returns An array of the sections
+     */
+    static SplitIntoSections(text: string, n: number): string[] {
+        const sectionLength = Math.ceil(text.length / n);
+        const sections: string[] = [];
+
+        for (let i = 0; i < n; i++) {
+            const start = i * sectionLength;
+            const end = start + sectionLength;
+            sections.push(text.slice(start, end));
+        }
+
+        return sections;
+    }
+
+    /**
      * Generate a Character2Hash unit from a string
      * @param str - The single character to generate an hash from
      * @returns The encoded Character2Hash Unit
@@ -32,6 +51,19 @@ export class TestUtils {
     static GenerateHashFromHashes(hashes: string[]) {
         // Ensure we're using the same encoding as Solidity
         return keccak256(AbiCoder.defaultAbiCoder().encode(["bytes32", "bytes32"], [hashes[0], hashes[1]]));
+    }
+
+    /**
+     * Encrypt content using a key
+     * @dev This is a dummy function for testing purposes until we have a real off-chain encryption function.
+     *      It is not secure and should not be used in production and should be replaced when we have a real
+     *      off-chain encryption function.
+     * @param content - The content to encrypt
+     * @param key - The key to encrypt the content with
+     * @returns The encrypted content
+     */
+    static EncryptContent(content: string, key: string) {
+        return AbiCoder.defaultAbiCoder().encode(["string", "bytes32"], [content, key]);
     }
 
     /**

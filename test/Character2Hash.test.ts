@@ -9,28 +9,28 @@ const isCoverage = process.env.COVERAGE === "true";
 
 describe("Character2Hash", function () {
     let character2Hash: Contract;
-    let hashRegistry: Contract;
+    let decxRegistry: Contract;
     let utf8Validator: Contract;
 
     beforeEach(async function () {
         // Get the contract factories
-        const HashRegistry = await ethers.getContractFactory("HashRegistry");
+        const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
         const UTF8Validator = await ethers.getContractFactory("UTF8Validator");
         const Character2Hash = await ethers.getContractFactory("Character2Hash");
 
         // Deploy the contracts
-        hashRegistry = await HashRegistry.deploy();
-        await hashRegistry.waitForDeployment();
+        decxRegistry = await DecxRegistry.deploy();
+        await decxRegistry.waitForDeployment();
 
         utf8Validator = await UTF8Validator.deploy();
         await utf8Validator.waitForDeployment();
 
         // Get the deployed addresses
-        const hashRegistryAddress = await hashRegistry.getAddress();
+        const decxRegistryAddress = await decxRegistry.getAddress();
         const utf8ValidatorAddress = await utf8Validator.getAddress();
 
         // Deploy main contract with the correct addresses
-        character2Hash = await Character2Hash.deploy(hashRegistryAddress, utf8ValidatorAddress);
+        character2Hash = await Character2Hash.deploy(decxRegistryAddress, utf8ValidatorAddress);
         await character2Hash.waitForDeployment();
     });
 
@@ -46,8 +46,8 @@ describe("Character2Hash", function () {
             const tx = await character2Hash.addCharacter2Hash(character);
             const receipt = await tx.wait();
 
-            // Verify the hash is stored in HashRegistry
-            const storedHash = await hashRegistry.getHashForCharacter(character);
+            // Verify the hash is stored in DecxRegistry
+            const storedHash = await decxRegistry.getHashForCharacter(character);
             expect(storedHash).to.not.equal(ethers.ZeroHash);
         });
 
@@ -56,8 +56,8 @@ describe("Character2Hash", function () {
             const tx = await character2Hash.addCharacter2Hash(character);
             const receipt = await tx.wait();
 
-            // Verify the hash is stored in HashRegistry
-            const storedHash = await hashRegistry.getHashForCharacter(character);
+            // Verify the hash is stored in DecxRegistry
+            const storedHash = await decxRegistry.getHashForCharacter(character);
             expect(storedHash).to.not.equal(ethers.ZeroHash);
         });
 
@@ -97,7 +97,9 @@ describe("Character2Hash", function () {
             receipt1.operation = `novel hashing of "${character}"`;
             receipt2.operation = `hashing attempt of "${character}"`;
 
-            await TestUtils.PrintGasFees([receipt1, receipt2]);
+            if (process.env.PRINT_FEES === "true") {
+                await TestUtils.PrintGasFees([receipt1, receipt2]);
+            }
 
             expect(receipt2.gasUsed).to.be.lessThan(receipt1.gasUsed);
         });

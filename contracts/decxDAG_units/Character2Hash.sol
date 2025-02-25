@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import "./HashRegistry.sol";
+import "./DecxRegistry.sol";
 import "../interfaces/IUTF8Validator.sol";
 import "../interfaces/ICharacter2Hash.sol";
 
 contract Character2Hash is ICharacter2Hash {
 
-    HashRegistry private hashRegistry;
+    DecxRegistry private decxRegistry;
     IUTF8Validator private utf8Validator;
 
-    constructor(address _hashRegistryAddress, address _utf8ValidatorAddress) {
-        hashRegistry = HashRegistry(_hashRegistryAddress);
+    constructor(address _decxRegistryAddress, address _utf8ValidatorAddress) {
+        decxRegistry = DecxRegistry(_decxRegistryAddress);
         utf8Validator = IUTF8Validator(_utf8ValidatorAddress);
     }
 
@@ -24,8 +24,8 @@ contract Character2Hash is ICharacter2Hash {
         // Validate the character using the UTF8Validator
         utf8Validator.validateCharacter(character);
 
-        // Use the hash registry to add the character and get the hash
-        bytes32 hash = hashRegistry.addCharacterHash(character);
+        // Use the decxregistry to add the character and get the hash
+        bytes32 hash = decxRegistry.addCharacterHash(character);
 
         return hash;
     }
