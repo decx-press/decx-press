@@ -12,11 +12,10 @@ interface IDecxRegistry {
 
     /**
         @dev Combine two hashes and add the composite hash to the decxregistry.
-        @param hash1 The first hash.
-        @param hash2 The second hash.
+        @param hashes The array of hashes to combine.
         @return The composite hash of the two hashes.
     */
-    function addHashesHash(bytes32 hash1, bytes32 hash2) external returns (bytes32);
+    function addHashesHash(bytes32[2] memory hashes) external returns (bytes32);
 
     /**
         @dev Check if a hash is present in the contract.
@@ -34,9 +33,8 @@ interface IDecxRegistry {
 
     /**
         @dev Get the composite hash for two hashes.
-        @param hash1 The first hash.
-        @param hash2 The second hash.
+        @param hashes The array of hashes to combine.
         @return The composite hash of the two hashes.
     */
-    function getHashForHashes(bytes32 hash1, bytes32 hash2) external view returns (bytes32);
+    function getHashForHashes(bytes32[2] memory hashes) external view returns (bytes32);
 }

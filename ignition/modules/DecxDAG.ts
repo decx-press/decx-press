@@ -1,22 +1,18 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 const DecxDAGModule = buildModule("DecxDAGModule", (m) => {
-    // Deploy base contracts first
-    const decxRegistry = m.contract("DecxRegistry", []);
+    // Deploy UTF8Validator first
     const utf8Validator = m.contract("UTF8Validator", []);
 
-    // Deploy dependent contracts
-    const character2Hash = m.contract("Character2Hash", [decxRegistry, utf8Validator]);
-    const hashes2Hash = m.contract("Hashes2Hash", [decxRegistry]);
+    // Deploy DecxRegistry with UTF8Validator
+    const decxRegistry = m.contract("DecxRegistry", [utf8Validator]);
 
-    // Deploy main contract with dependencies
-    const DecxDAG = m.contract("DecxDAG", [character2Hash, hashes2Hash]);
+    // Deploy DecxDAG with DecxRegistry
+    const DecxDAG = m.contract("DecxDAG", [decxRegistry]);
 
     return {
-        decxRegistry,
         utf8Validator,
-        character2Hash,
-        hashes2Hash,
+        decxRegistry,
         DecxDAG
     };
 });

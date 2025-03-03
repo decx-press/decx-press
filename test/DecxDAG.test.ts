@@ -11,25 +11,19 @@ const isCoverage = process.env.COVERAGE === "true";
 
 describe("DecxDAG", function () {
     async function deployDecxDAGFixture() {
-        const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
-        const decxRegistryContract = await DecxRegistry.deploy();
-
+        // Deploy UTF8Validator first
         const UTF8Validator = await ethers.getContractFactory("UTF8Validator");
         const utf8ValidatorContract = await UTF8Validator.deploy();
 
-        const Character2Hash = await ethers.getContractFactory("Character2Hash");
-        const character2HashContract = await Character2Hash.deploy(
-            decxRegistryContract.target,
-            utf8ValidatorContract.target
-        );
+        // Deploy DecxRegistry with UTF8Validator
+        const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
+        const decxRegistryContract = await DecxRegistry.deploy(utf8ValidatorContract.target);
 
-        const Hashes2Hash = await ethers.getContractFactory("Hashes2Hash");
-        const hashes2HashContract = await Hashes2Hash.deploy(decxRegistryContract.target);
-
+        // Deploy DecxDAG with DecxRegistry
         const DecxDAG = await ethers.getContractFactory("DecxDAG");
-        const decxDAGContract = await DecxDAG.deploy(character2HashContract.target, hashes2HashContract.target);
+        const decxDAGContract = await DecxDAG.deploy(decxRegistryContract.target);
 
-        return { decxDAGContract, character2HashContract, hashes2HashContract, decxRegistryContract };
+        return { decxDAGContract, utf8ValidatorContract, decxRegistryContract };
     }
 
     describe("Deployment", function () {

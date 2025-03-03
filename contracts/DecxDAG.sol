@@ -1,18 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.28;
 
-import "./decxDAG_units/Character2Hash.sol";
-import "./decxDAG_units/Hashes2Hash.sol";
+import "./decxDAG_units/DecxRegistry.sol";
 
 contract DecxDAG {
     error DecxDAG_EmptyStringNotAllowed();
 
-    Character2Hash private character2Hash;
-    Hashes2Hash private hashes2Hash;
+    DecxRegistry private decxRegistry;
 
-    constructor(address _character2Hash, address _hashes2Hash) {
-        character2Hash = Character2Hash(_character2Hash);
-        hashes2Hash = Hashes2Hash(_hashes2Hash);
+    constructor(address _decxRegistry) {
+        decxRegistry = DecxRegistry(_decxRegistry);
     }
 
     /// @notice Creates a unique hash fingerprint from any text input by processing each character
@@ -64,9 +61,9 @@ contract DecxDAG {
                 charBytes[j] = stringBytes[i + j];
             }
 
-            // Let character2Hash (which uses UTF8Validator) handle validation
+            // Let decxRegistry (which uses UTF8Validator) handle validation
             string memory character = string(charBytes);
-            hashes[charCount] = character2Hash.addCharacter2Hash(character);
+            hashes[charCount] = decxRegistry.addCharacterHash(character);
 
             i += charLen;
             charCount++;
@@ -91,7 +88,7 @@ contract DecxDAG {
 
             // Process pairs
             for (uint256 i = 0; i + 1 < currentLength; i += 2) {
-                newHashes[i/2] = hashes2Hash.addHashes2Hash([hashes[i], hashes[i + 1]]);
+                newHashes[i/2] = decxRegistry.addHashesHash([hashes[i], hashes[i + 1]]);
             }
 
             // Handle last element if odd length

@@ -2,9 +2,11 @@
 pragma solidity ^0.8.28;
 
 import "../interfaces/IDecxRegistry.sol";
+import "../interfaces/IUTF8Validator.sol";
 
 contract DecxRegistry is IDecxRegistry {
     error DecxRegistry_InvalidHash();
+    error DecxRegistry_ZeroHashNotAllowed();
 
     // Hash mappings
     mapping(bytes32 => bool) public HashExists;
@@ -15,6 +17,13 @@ contract DecxRegistry is IDecxRegistry {
     mapping(bytes32 => bytes) public EncryptedContent;
     mapping(bytes32 => bytes32[2]) public EncryptionPaths;
     mapping(bytes32 => address) public ContentCreator;
+
+    // Validator
+    IUTF8Validator private utf8Validator;
+
+    constructor(address _utf8ValidatorAddress) {
+        utf8Validator = IUTF8Validator(_utf8ValidatorAddress);
+    }
 
     // Events
     /// @notice Emitted when content is encrypted.
@@ -33,6 +42,9 @@ contract DecxRegistry is IDecxRegistry {
     /// @param character The UTF character to hash.
     /// @return The hash of the character.
     function addCharacterHash(string memory character) public returns (bytes32) {
+        // Validate UTF8 character
+        utf8Validator.validateCharacter(character);
+
         // Check if the character is already in the contract
         bytes32 existingHash = HashLookup[character];
         if (existingHash != bytes32(0)) {
@@ -57,17 +69,21 @@ contract DecxRegistry is IDecxRegistry {
     }
 
     /// @dev Combine two hashes and add the composite hash to the decxregistry.
-    /// @param hash1 The first hash.
-    /// @param hash2 The second hash.
+    /// @param hashes The array of hashes to combine.
     /// @return The composite hash of the two hashes.
-    function addHashesHash(bytes32 hash1, bytes32 hash2) public returns (bytes32) {
+    function addHashesHash(bytes32[2] memory hashes) public returns (bytes32) {
+        // ensure hashes are not zero
+        if (hashes[0] == bytes32(0) || hashes[1] == bytes32(0)) {
+            revert DecxRegistry_ZeroHashNotAllowed();
+        }
+
         // ensure both hashes exist before proceeding
-        if (!isHashPresent(hash1) || !isHashPresent(hash2)) {
+        if (!isHashPresent(hashes[0]) || !isHashPresent(hashes[1])) {
             revert DecxRegistry_InvalidHash();
         }
 
         // Encode once and use for both keys
-        bytes memory encoded = abi.encode(hash1, hash2);
+        bytes memory encoded = abi.encode(hashes[0], hashes[1]);
 
         // Create composite key and check if it exists
         bytes32 compositeKey = keccak256(encoded);
@@ -86,11 +102,11 @@ contract DecxRegistry is IDecxRegistry {
         // Store dummy encrypted content
         // TODO: Update once we have a real off-chain encryption function
         EncryptedContent[hashesHash] = dummyEncrypt("combined", hashesHash);
-        EncryptionPaths[hashesHash] = [hash1, hash2];
+        EncryptionPaths[hashesHash] = hashes;
         ContentCreator[hashesHash] = msg.sender;
 
         emit ContentEncrypted(hashesHash, msg.sender);
-        emit EncryptionPathCreated(hashesHash, [hash1, hash2]);
+        emit EncryptionPathCreated(hashesHash, hashes);
 
         return hashesHash;
     }
@@ -110,11 +126,10 @@ contract DecxRegistry is IDecxRegistry {
     }
 
     /// @dev Get the hash for two hashes.
-    /// @param hash1 The first hash.
-    /// @param hash2 The second hash.
+    /// @param hashes The array of hashes to combine.
     /// @return The hash of the two hashes.
-    function getHashForHashes(bytes32 hash1, bytes32 hash2) public view returns (bytes32) {
-        return HashesLookup[keccak256(abi.encode(hash1, hash2))];
+    function getHashForHashes(bytes32[2] memory hashes) public view returns (bytes32) {
+        return HashesLookup[keccak256(abi.encode(hashes))];
     }
 
     /// @notice Encrypt content using a key.
