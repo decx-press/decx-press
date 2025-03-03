@@ -1,6 +1,5 @@
 import * as secp from "@noble/secp256k1";
 import { randomBytes, createCipheriv, createDecipheriv, createHmac } from "crypto";
-import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex } from "@noble/hashes/utils";
 import { hkdf } from "@noble/hashes/hkdf";
 import { sha512 } from "@noble/hashes/sha512";
