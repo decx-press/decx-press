@@ -46,8 +46,8 @@ export class DecxPressService {
     }
 
     async press(content: string): Promise<string> {
-        console.log("\n=== Starting Press Operation ===");
-        console.log("Original content:", content);
+        // console.log("\n=== Starting Press Operation ===");
+        // console.log("Original content:", content);
 
         // Store original content for later use
         this.originalContent = content;
@@ -57,7 +57,7 @@ export class DecxPressService {
         this.hashToCharMap.clear();
 
         // 1. Call DecxDAG to process content and get hash
-        console.log("\nCalling DecxDAG.press...");
+        // console.log("\nCalling DecxDAG.press...");
         const tx = await this.decxDAG.press(content);
         const receipt = await tx.wait();
 
@@ -143,7 +143,8 @@ export class DecxPressService {
                 if (events.length === 0) {
                     throw new Error(`No encrypted data found for hash ${hash}`);
                 }
-                const event = events[0] as EncryptedDataStoredEvent;
+                // Get the latest event
+                const event = events[events.length - 1] as EncryptedDataStoredEvent;
                 return {
                     hash,
                     encryptedContent: Buffer.from(ethers.getBytes(event.args.encryptedPayload))
@@ -212,7 +213,7 @@ export class DecxPressService {
 
         // console.log("\nFinal Maps:");
         // console.log("PairMap:", Object.fromEntries(pairMap));
-        console.log("ContentMap:", Object.fromEntries(contentMap));
+        // console.log("ContentMap:", Object.fromEntries(contentMap));
 
         // Second pass: resolve pairs if any exist
         if (pairMap.size > 0) {
@@ -228,82 +229,96 @@ export class DecxPressService {
     }
 
     private resolvePairs(pairMap: Map<string, string[]>, contentMap: Map<string, string>): string {
+        // -------------------------------------------------------------
+        // 1. Identify the correct root of the DAG/tree:
+        // -------------------------------------------------------------
+        // Build a set of all child hashes in the pairs
+        const allChildren = new Set<string>();
+        for (const [hash, pair] of pairMap) {
+            if (pair[0] !== ethers.ZeroHash) {
+                allChildren.add(pair[0]);
+            }
+            if (pair[1] !== ethers.ZeroHash) {
+                allChildren.add(pair[1]);
+            }
+        }
+
+        // The "true root" is the one hash that is never a child
+        let rootHash: string | undefined;
+        for (const hash of pairMap.keys()) {
+            if (!allChildren.has(hash)) {
+                rootHash = hash;
+                break;
+            }
+        }
+
+        if (!rootHash) {
+            throw new Error("No valid root found in pairMap");
+        }
+
+        // console.log("\nStarting resolution from root hash:", rootHash);
+
+        // -------------------------------------------------------------
+        // 2. Depth-first resolution from the discovered root
+        // -------------------------------------------------------------
         const characters = new Map<number, string>();
         let maxIndex = 0;
         let depth = 0; // Track recursion depth
         const visited = new Set<string>(); // Track visited hashes to prevent cycles
-        const positions = new Map<string, number>(); // Track positions of hashes in the tree
 
-        // Helper function to resolve a hash recursively
         const resolveHash = (hash: string, position: number) => {
             depth++;
-            const indent = "  ".repeat(depth);
-            console.log(`${indent}Resolving hash ${hash} at position ${position} (depth: ${depth})`);
+            // const indent = "  ".repeat(depth);
+            // console.log(`${indent}Resolving hash ${hash} at position ${position} (depth: ${depth})`);
 
-            // Store the position for this hash
-            positions.set(hash, position);
-
-            // Prevent cycles
             if (visited.has(hash)) {
-                console.log(`${indent}Already visited hash ${hash}, skipping`);
+                if (contentMap.has(hash)) {
+                    characters.set(position, contentMap.get(hash)!);
+                    maxIndex = Math.max(maxIndex, position);
+                    // console.log(`${indent}Found leaf content: ${contentMap.get(hash)} at position ${position}`);
+                }
                 depth--;
                 return;
             }
             visited.add(hash);
 
-            // Base case 1: We've already found content for this hash
+            // If we have a leaf already in contentMap, store it at 'position'
             if (contentMap.has(hash)) {
                 const content = contentMap.get(hash)!;
                 characters.set(position, content);
                 maxIndex = Math.max(maxIndex, position);
-                console.log(`${indent}Found content: ${content} at position ${position}`);
+                // console.log(`${indent}Found leaf content: ${content} at position ${position}`);
                 depth--;
                 return;
             }
 
-            // Base case 2: This is a pair we need to resolve
+            // Otherwise, this hash must be an inner pair
             const pair = pairMap.get(hash);
             if (!pair) {
-                console.log(`${indent}ERROR: Cannot find content or pair for hash ${hash}`);
+                // console.log(`${indent}ERROR: Cannot find content or pair for hash ${hash}`);
                 throw new Error(`Cannot find content or pair for hash ${hash}`);
             }
+            // console.log(`${indent}Found pair: [${pair[0]}, ${pair[1]}]`);
 
-            console.log(`${indent}Found pair: [${pair[0]}, ${pair[1]}]`);
-
-            // Check if this is a leaf node (second component is ZeroHash)
+            // If pair[1] is ZeroHash, it's just a single child
             if (pair[1] === ethers.ZeroHash) {
-                console.log(
-                    `${indent}This is a leaf node, resolving left component ${pair[0]} at position ${position}`
-                );
                 resolveHash(pair[0], position);
             } else {
-                // This is an inner node, resolve both components
-                // For inner nodes, we need to determine the positions of the children
-                // The left child gets the current position, the right child gets the next available position
-                console.log(`${indent}Resolving left component ${pair[0]} at position ${position}`);
+                // Resolve left child at 'position'
                 resolveHash(pair[0], position);
-
-                // Find the next available position after all positions in the left subtree
-                const nextPosition = maxIndex + 1;
-                console.log(`${indent}Resolving right component ${pair[1]} at position ${nextPosition}`);
-                resolveHash(pair[1], nextPosition);
+                // And the right child goes at the next available index
+                const nextPos = maxIndex + 1;
+                resolveHash(pair[1], nextPos);
             }
-
             depth--;
         };
 
-        // Find the root hash (should be the last one in our path)
-        const rootHash = Array.from(pairMap.keys())[pairMap.size - 1];
-        if (!rootHash) {
-            throw new Error("No root hash found in pair map");
-        }
-
-        console.log("\nStarting resolution from root hash:", rootHash);
+        // Finally, recursively resolve from the "true root"
         resolveHash(rootHash, 0);
 
-        console.log("\nFinal character positions:", Object.fromEntries(characters));
+        // console.log("\nFinal character positions:", Object.fromEntries(characters));
 
-        // Convert the position-mapped characters back to a string
+        // Convert position→character map to a string
         return Array.from({ length: maxIndex + 1 })
             .map((_, i) => characters.get(i))
             .filter(Boolean)

@@ -154,7 +154,7 @@ export class ECIESService {
         // Check if we have enough data for the basic components
         const basicSize = this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE + 1; // At least 1 byte of encrypted data
         if (encryptedData.length < basicSize) {
-            throw new Error(`Encrypted data size ${encryptedData.length} is too small for basic components`);
+            throw new Error(`Invalid encrypted data format`);
         }
 
         // Extract components
