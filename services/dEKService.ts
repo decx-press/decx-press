@@ -5,7 +5,7 @@ import { ECIESService } from "./encryption/ECIESService";
 interface EncryptionPathEvent {
     hash: string;
     components: string[];
-    index: number;
+    index: number; // Explicitly number type after conversion from BigInt
 }
 
 interface EncryptedContent {
@@ -22,8 +22,19 @@ type EncryptedDataStoredEvent = EventLog & {
     args: EncryptedDataStoredEventArgs;
 };
 
+interface CharacterHashedEventArgs extends Result {
+    character: string;
+    hash: string;
+}
+
+type CharacterHashedEvent = EventLog & {
+    args: CharacterHashedEventArgs;
+};
+
 export class DecxPressService {
     private contentMap: Map<string, number>;
+    private hashToCharMap: Map<string, string>; // Map from hash to character
+    private originalContent: string = ""; // Initialize with empty string
 
     constructor(
         private decxDAG: Contract,
@@ -31,57 +42,93 @@ export class DecxPressService {
         private recipientPublicKey: string
     ) {
         this.contentMap = new Map();
+        this.hashToCharMap = new Map();
     }
 
     async press(content: string): Promise<string> {
-        // Store original character positions for reconstruction
-        [...content].forEach((char, index) => {
-            this.contentMap.set(char, index);
-        });
+        console.log("\n=== Starting Press Operation ===");
+        console.log("Original content:", content);
+
+        // Store original content for later use
+        this.originalContent = content;
+
+        // Clear previous maps
+        this.contentMap.clear();
+        this.hashToCharMap.clear();
 
         // 1. Call DecxDAG to process content and get hash
+        console.log("\nCalling DecxDAG.press...");
         const tx = await this.decxDAG.press(content);
         const receipt = await tx.wait();
 
         // 2. Extract and sort encryption path events
+        // console.log("\nProcessing EncryptionPathCreated events:");
         const pathEvents: EncryptionPathEvent[] = receipt.logs
-            .filter((log) => log.fragment?.name === "EncryptionPathCreated")
-            .map((log) => ({
+            .filter((log: any) => log.fragment?.name === "EncryptionPathCreated")
+            .map((log: any) => ({
                 hash: log.args.hash,
                 components: log.args.components,
-                index: log.args.index
+                index: Number(log.args.index) // Convert BigInt to number
             }))
-            .sort((a, b) => a.index - b.index);
+            .sort((a: EncryptionPathEvent, b: EncryptionPathEvent) => a.index - b.index);
+
+        // console.log(`Found ${pathEvents.length} path events:`);
+        // pathEvents.forEach((event, i) => {
+        //     console.log(`\nEvent ${i + 1}:`);
+        //     console.log(`  Hash: ${event.hash}`);
+        //     console.log(`  Components: [${event.components[0]}, ${event.components[1]}]`);
+        //     console.log(`  Index: ${event.index}`);
+        // });
+
+        // Find leaf nodes (character hashes) and map them to characters
+        // The first N events (where N = content.length) are leaf nodes in order
+        const characters = [...content];
+        for (let i = 0; i < characters.length; i++) {
+            const event = pathEvents[i];
+            if (event && event.components[1] === ethers.ZeroHash) {
+                const char = characters[i];
+                this.hashToCharMap.set(event.hash, char);
+                // console.log(`Mapped hash ${event.hash} to character '${char}'`);
+            }
+        }
 
         // 3. For each hash in the path, encrypt and emit
+        // console.log("\nEncrypting and storing content for each hash:");
         for (const event of pathEvents) {
             const { hash, components } = event;
+            // console.log(`\nProcessing hash: ${hash}`);
 
             let contentToEncrypt: string;
-            if (components[0] === ethers.ZeroHash) {
-                // Single character hash - find original character
-                const charIndex = this.contentMap.get(hash);
-                if (charIndex === undefined) {
+            const isLeafNode = components[1] === ethers.ZeroHash;
+
+            if (isLeafNode) {
+                // Leaf node - get character from our hash-to-char map
+                const char = this.hashToCharMap.get(hash);
+                if (!char) {
                     throw new Error(`Cannot find character for hash ${hash}`);
                 }
-                contentToEncrypt = content[charIndex];
+                contentToEncrypt = char;
+                // console.log(`  Found leaf node with character: '${contentToEncrypt}' for hash ${hash}`);
             } else {
-                // Pair hash - encrypt the component hashes
+                // Inner node - encrypt the component hashes as a pair
                 contentToEncrypt = JSON.stringify(components);
+                // console.log(`  Found inner node with components: [${components[0]}, ${components[1]}]`);
             }
 
             // Encrypt content for this hash
+            // console.log(`  Encrypting content: ${contentToEncrypt}`);
             const encryptedContent = await this.eciesService.encrypt(contentToEncrypt, this.recipientPublicKey);
 
             // Emit encrypted content
+            // console.log(`  Storing encrypted content for hash ${hash}`);
             await this.decxDAG.storeEncryptedData(hash, encryptedContent);
         }
 
-        // Clear the content map
-        this.contentMap.clear();
-
         // Return final hash
-        return pathEvents[pathEvents.length - 1].hash;
+        const finalHash = pathEvents[pathEvents.length - 1].hash;
+        // console.log("\n=== Press Operation Complete ===");
+        // console.log("Final hash:", finalHash);
+        return finalHash;
     }
 
     async release(finalHash: string): Promise<string> {
@@ -99,89 +146,162 @@ export class DecxPressService {
                 const event = events[0] as EncryptedDataStoredEvent;
                 return {
                     hash,
-                    encryptedContent: event.args.encryptedPayload
+                    encryptedContent: Buffer.from(ethers.getBytes(event.args.encryptedPayload))
                 };
             })
         );
-
+        // console.log("Encrypted contents:", encryptedContents);
         // 3. Decrypt and reconstruct content
         return this.reconstructContent(encryptedContents);
     }
 
     private async getEncryptionPath(finalHash: string): Promise<string[]> {
         const path: string[] = [];
-        let currentHash = finalHash;
+        const visited = new Set<string>();
 
-        while (currentHash !== ethers.ZeroHash) {
-            path.push(currentHash);
-            const components = await this.decxDAG.getComponents(currentHash);
-            // If both components are ZeroHash, we've reached a leaf node
-            if (components[0] === ethers.ZeroHash && components[1] === ethers.ZeroHash) {
-                break;
-            }
-            // Continue with the next hash in the path
-            currentHash = components[0];
-        }
-
-        return path.reverse();
-    }
-
-    private async reconstructContent(encryptedContents: EncryptedContent[]): Promise<string> {
-        let result = "";
-        const pairMap = new Map<string, string[]>();
-
-        // First pass: decrypt all contents
-        for (const { hash, encryptedContent } of encryptedContents) {
-            const decrypted = await this.eciesService.decrypt(encryptedContent);
-
-            try {
-                // Try to parse as JSON (pair hash)
-                const components = JSON.parse(decrypted);
-                if (Array.isArray(components) && components.length === 2) {
-                    pairMap.set(hash, components);
-                    continue;
-                }
-            } catch {
-                // Not JSON, must be a single character
-                result += decrypted;
-            }
-        }
-
-        // Second pass: resolve pairs if any exist
-        if (pairMap.size > 0) {
-            result = this.resolvePairs(pairMap);
-        }
-
-        return result;
-    }
-
-    private resolvePairs(pairMap: Map<string, string[]>): string {
-        const characters = new Map<number, string>();
-        let maxIndex = 0;
-
-        // Helper function to resolve a hash recursively
-        const resolveHash = (hash: string, position: number) => {
-            const pair = pairMap.get(hash);
-            if (!pair) {
-                // If not in pairMap, it must be a single character
-                characters.set(position, hash);
-                maxIndex = Math.max(maxIndex, position);
+        const addToPath = async (hash: string) => {
+            if (hash === ethers.ZeroHash || visited.has(hash)) {
                 return;
             }
 
-            // Resolve left component (position stays same)
-            resolveHash(pair[0], position);
+            visited.add(hash);
+            path.push(hash);
 
-            // Resolve right component (position + 1)
-            if (pair[1] !== ethers.ZeroHash) {
-                resolveHash(pair[1], position + 1);
+            const components = await this.decxDAG.getComponents(hash);
+            // If the second component is ZeroHash, we've reached a leaf node
+            if (components[1] === ethers.ZeroHash) {
+                return;
             }
+
+            // Add both components to the path
+            await addToPath(components[0]);
+            await addToPath(components[1]);
         };
 
-        // Start resolution from the last hash in our pair map
-        // (which should be the root of our DAG)
+        await addToPath(finalHash);
+        return path;
+    }
+
+    private async reconstructContent(encryptedContents: EncryptedContent[]): Promise<string> {
+        const pairMap = new Map<string, string[]>();
+        const contentMap = new Map<string, string>();
+
+        // First pass: decrypt all contents and categorize them
+        for (const { hash, encryptedContent } of encryptedContents) {
+            try {
+                // Get the components to determine if this is a leaf node
+                const components = await this.decxDAG.getComponents(hash);
+                const isLeafNode = components[1] === ethers.ZeroHash;
+
+                if (isLeafNode) {
+                    // This is a leaf node - decrypt as a character
+                    const character = await this.eciesService.decryptCharacter(encryptedContent);
+                    contentMap.set(hash, character);
+                    // console.log(`Stored leaf node character for ${hash}: ${character}`);
+                } else {
+                    // This is a pair - decrypt as a pair of hashes
+                    const pairComponents = await this.eciesService.decryptPairs(encryptedContent);
+                    pairMap.set(hash, pairComponents);
+                    // console.log(`Stored pair for ${hash}: [${pairComponents[0]}, ${pairComponents[1]}]`);
+                }
+            } catch (error) {
+                console.error(`Error decrypting content for hash ${hash}:`, error);
+                throw error;
+            }
+        }
+
+        // console.log("\nFinal Maps:");
+        // console.log("PairMap:", Object.fromEntries(pairMap));
+        console.log("ContentMap:", Object.fromEntries(contentMap));
+
+        // Second pass: resolve pairs if any exist
+        if (pairMap.size > 0) {
+            return this.resolvePairs(pairMap, contentMap);
+        }
+
+        // If no pairs, just return the single decrypted value
+        const singleContent = contentMap.values().next().value;
+        if (!singleContent) {
+            throw new Error("No content found to reconstruct");
+        }
+        return singleContent;
+    }
+
+    private resolvePairs(pairMap: Map<string, string[]>, contentMap: Map<string, string>): string {
+        const characters = new Map<number, string>();
+        let maxIndex = 0;
+        let depth = 0; // Track recursion depth
+        const visited = new Set<string>(); // Track visited hashes to prevent cycles
+        const positions = new Map<string, number>(); // Track positions of hashes in the tree
+
+        // Helper function to resolve a hash recursively
+        const resolveHash = (hash: string, position: number) => {
+            depth++;
+            const indent = "  ".repeat(depth);
+            console.log(`${indent}Resolving hash ${hash} at position ${position} (depth: ${depth})`);
+
+            // Store the position for this hash
+            positions.set(hash, position);
+
+            // Prevent cycles
+            if (visited.has(hash)) {
+                console.log(`${indent}Already visited hash ${hash}, skipping`);
+                depth--;
+                return;
+            }
+            visited.add(hash);
+
+            // Base case 1: We've already found content for this hash
+            if (contentMap.has(hash)) {
+                const content = contentMap.get(hash)!;
+                characters.set(position, content);
+                maxIndex = Math.max(maxIndex, position);
+                console.log(`${indent}Found content: ${content} at position ${position}`);
+                depth--;
+                return;
+            }
+
+            // Base case 2: This is a pair we need to resolve
+            const pair = pairMap.get(hash);
+            if (!pair) {
+                console.log(`${indent}ERROR: Cannot find content or pair for hash ${hash}`);
+                throw new Error(`Cannot find content or pair for hash ${hash}`);
+            }
+
+            console.log(`${indent}Found pair: [${pair[0]}, ${pair[1]}]`);
+
+            // Check if this is a leaf node (second component is ZeroHash)
+            if (pair[1] === ethers.ZeroHash) {
+                console.log(
+                    `${indent}This is a leaf node, resolving left component ${pair[0]} at position ${position}`
+                );
+                resolveHash(pair[0], position);
+            } else {
+                // This is an inner node, resolve both components
+                // For inner nodes, we need to determine the positions of the children
+                // The left child gets the current position, the right child gets the next available position
+                console.log(`${indent}Resolving left component ${pair[0]} at position ${position}`);
+                resolveHash(pair[0], position);
+
+                // Find the next available position after all positions in the left subtree
+                const nextPosition = maxIndex + 1;
+                console.log(`${indent}Resolving right component ${pair[1]} at position ${nextPosition}`);
+                resolveHash(pair[1], nextPosition);
+            }
+
+            depth--;
+        };
+
+        // Find the root hash (should be the last one in our path)
         const rootHash = Array.from(pairMap.keys())[pairMap.size - 1];
+        if (!rootHash) {
+            throw new Error("No root hash found in pair map");
+        }
+
+        console.log("\nStarting resolution from root hash:", rootHash);
         resolveHash(rootHash, 0);
+
+        console.log("\nFinal character positions:", Object.fromEntries(characters));
 
         // Convert the position-mapped characters back to a string
         return Array.from({ length: maxIndex + 1 })

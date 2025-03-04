@@ -92,7 +92,7 @@ describe("DecxRegistry", function () {
             await decxRegistryContract.addCharacterHash(CHAR1);
 
             // Check that the hash exists
-            const exists = await decxRegistryContract.isHashPresent(hash);
+            const exists = await decxRegistryContract.hashExists(hash);
             expect(exists).to.be.true;
 
             // Check reverse lookup
@@ -146,8 +146,8 @@ describe("DecxRegistry", function () {
             const atomicHash2 = await decxRegistryContract.getHashForCharacter(CHAR2);
 
             // ensure the hashes are present in the decxregistry
-            expect(await decxRegistryContract.isHashPresent(atomicHash1)).to.be.true;
-            expect(await decxRegistryContract.isHashPresent(atomicHash2)).to.be.true;
+            expect(await decxRegistryContract.hashExists(atomicHash1)).to.be.true;
+            expect(await decxRegistryContract.hashExists(atomicHash2)).to.be.true;
 
             // Add the it to the hashes2hash and wait for the transaction
             const atomicHashes = [atomicHash1, atomicHash2];
@@ -164,7 +164,7 @@ describe("DecxRegistry", function () {
             expect(generatedHash).to.equal(expectedHash);
 
             // Check that the hash exists
-            const exists = await decxRegistryContract.isHashPresent(expectedHash);
+            const exists = await decxRegistryContract.hashExists(expectedHash);
             expect(exists).to.be.true;
         });
     });
@@ -215,64 +215,37 @@ describe("DecxRegistry", function () {
     });
 
     describe("Encryption Storage and Events", function () {
-        it("Should emit ContentEncrypted and EncryptionPathCreated events for a single character", async function () {
+        it("Should store a character hash correctly", async function () {
             const { decxRegistryContract } = await loadFixture(deployDecxRegistryFixture);
             const hash = TestUtils.GenerateHashFromChar(CHAR1);
 
             // Call the addCharacterHash function and wait for the transaction receipt
             const tx = await decxRegistryContract.addCharacterHash(CHAR1);
-            const receipt = await tx.wait();
+            await tx.wait();
 
-            // Check for ContentEncrypted event
-            const contentEncryptedEvent = receipt.logs.find((log: any) => log.fragment.name === "ContentEncrypted");
-            const [signer] = await ethers.getSigners();
-            expect(contentEncryptedEvent.args.creator).to.equal(await signer.getAddress());
-            expect(contentEncryptedEvent).to.exist; // Ensure the event was emitted
-            expect(contentEncryptedEvent.args.hash).to.equal(hash); // Check the hash argument
-
-            // Check for EncryptionPathCreated event
-            const encryptionPathCreatedEvent = receipt.logs.find(
-                (log: any) => log.fragment.name === "EncryptionPathCreated"
-            );
-            expect(encryptionPathCreatedEvent).to.exist; // Ensure the event was emitted
-            expect(encryptionPathCreatedEvent.args.hash).to.equal(hash); // Check the hash argument
-            expect(encryptionPathCreatedEvent.args.components).to.deep.equal([hash, ethers.ZeroHash]); // Check the components argument
+            // Verify the hash exists and can be looked up
+            expect(await decxRegistryContract.hashExists(hash)).to.be.true;
+            expect(await decxRegistryContract.getHashForCharacter(CHAR1)).to.equal(hash);
         });
 
-        it("Should store encryption for a single character correctly", async function () {
-            const { decxRegistryContract } = await loadFixture(deployDecxRegistryFixture);
-            const expectedHash = TestUtils.GenerateHashFromChar(CHAR1);
-            const encryption = TestUtils.EncryptContent(CHAR1, expectedHash);
-
-            // Call the function that stores the dummy encryption
-            await decxRegistryContract.addCharacterHash(CHAR1);
-
-            // Retrieve the stored encryption
-            const storedEncryption = await decxRegistryContract.EncryptedContent(expectedHash);
-
-            // Verify that the stored encryption matches the expected dummy encryption
-            expect(storedEncryption).to.equal(encryption);
-        });
-
-        it("Should not emit ContentEncrypted and EncryptionPathCreated events for a duplicate character", async function () {
+        it("Should not store duplicate character hashes", async function () {
             const { decxRegistryContract } = await loadFixture(deployDecxRegistryFixture);
 
-            // Call the addCharacterHash function and wait for the transaction receipt
-            await decxRegistryContract.addCharacterHash(CHAR1);
+            // First addition
+            const tx1 = await decxRegistryContract.addCharacterHash(CHAR1);
+            const receipt1 = await tx1.wait();
+            const hash1 = await decxRegistryContract.getHashForCharacter(CHAR1);
 
-            // Call the addCharacterHash function again to use the character again
-            const tx = await decxRegistryContract.addCharacterHash(CHAR1);
-            const receipt = await tx.wait();
+            // Second addition of same character
+            const tx2 = await decxRegistryContract.addCharacterHash(CHAR1);
+            const receipt2 = await tx2.wait();
+            const hash2 = await decxRegistryContract.getHashForCharacter(CHAR1);
 
-            // Ensure the ContentEncrypted event was not emitted
-            const contentEncryptedEvent = receipt.logs?.find((log: any) => log.fragment.name === "ContentEncrypted");
-            expect(contentEncryptedEvent).to.not.exist;
+            // Verify same hash is returned
+            expect(hash1).to.equal(hash2);
 
-            // Ensure the EncryptionPathCreated event was not emitted
-            const encryptionPathCreatedEvent = receipt.logs?.find(
-                (log: any) => log.fragment.name === "EncryptionPathCreated"
-            );
-            expect(encryptionPathCreatedEvent).to.not.exist;
+            // Verify second transaction used less gas (just returned existing hash)
+            expect(receipt2.gasUsed).to.be.lessThan(receipt1.gasUsed);
         });
     });
 

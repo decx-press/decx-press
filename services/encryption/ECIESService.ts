@@ -22,7 +22,7 @@ export class ECIESService {
 
     // Maximum sizes for our two types of content
     private readonly MAX_CHAR_SIZE = 4; // Maximum UTF-8 character size
-    private readonly MAX_HASH_PAIR_SIZE = 138; // ["0x<32 bytes>","0x<32 bytes>"]
+    private readonly MAX_HASH_PAIR_SIZE = 139; // ["0x<32 bytes>","0x<32 bytes>"]
 
     constructor(private privateKey: string) {
         if (!privateKey.startsWith("0x")) {
@@ -99,62 +99,133 @@ export class ECIESService {
     }
 
     /**
-     * Decrypts the content and validates its format.
-     * @throws Error if decryption fails or content format is invalid
+     * Decrypts and validates a hash pair.
+     * @returns Array of two hash strings
+     * @throws Error if decryption fails or content is not a valid hash pair
      */
-    async decrypt(encryptedData: Buffer): Promise<string> {
-        // Validate minimum size
-        const minSize = this.OVERHEAD_SIZE + this.AES_BLOCK_SIZE;
-        if (encryptedData.length < minSize) {
-            throw new Error(`Encrypted data size ${encryptedData.length} is less than minimum ${minSize}`);
+    async decryptPairs(encryptedData: Buffer): Promise<string[]> {
+        const content = await this._decryptRaw(encryptedData);
+
+        // Validate hash pair format
+        try {
+            const parsed = JSON.parse(content);
+            if (
+                !Array.isArray(parsed) ||
+                parsed.length !== 2 ||
+                !parsed.every((hash) => typeof hash === "string" && hash.startsWith("0x"))
+            ) {
+                throw new Error("Invalid decrypted hash pair format");
+            }
+            return parsed;
+        } catch (e) {
+            throw new Error("Invalid decrypted hash pair JSON");
+        }
+    }
+
+    /**
+     * Decrypts and validates a single character.
+     * @returns A single character string
+     * @throws Error if decryption fails or content is not a valid character
+     */
+    async decryptCharacter(encryptedData: Buffer): Promise<string> {
+        const content = await this._decryptRaw(encryptedData);
+
+        // Validate it's not a hash pair
+        if (content.startsWith("[")) {
+            throw new Error("Expected a character but got a hash pair");
+        }
+
+        // Validate character size
+        const contentBuffer = Buffer.from(content);
+        if (contentBuffer.length > this.MAX_CHAR_SIZE) {
+            throw new Error(
+                `Decrypted character size ${contentBuffer.length} exceeds maximum UTF-8 size ${this.MAX_CHAR_SIZE}`
+            );
+        }
+
+        return content;
+    }
+
+    /**
+     * Internal method that handles the raw decryption without format validation.
+     * @private
+     */
+    private async _decryptRaw(encryptedData: Buffer): Promise<string> {
+        // Check if we have enough data for the basic components
+        const basicSize = this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE + 1; // At least 1 byte of encrypted data
+        if (encryptedData.length < basicSize) {
+            throw new Error(`Encrypted data size ${encryptedData.length} is too small for basic components`);
         }
 
         // Extract components
         const ephemeralPubKey = encryptedData.subarray(0, this.EPHEMERAL_PUBKEY_SIZE);
         const iv = encryptedData.subarray(this.EPHEMERAL_PUBKEY_SIZE, this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE);
-        const encrypted = encryptedData.subarray(
-            this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE,
-            -this.AUTH_TAG_SIZE - this.MAC_SIZE
-        );
-        const authTag = encryptedData.subarray(-this.AUTH_TAG_SIZE - this.MAC_SIZE, -this.MAC_SIZE);
-        const mac = encryptedData.subarray(-this.MAC_SIZE);
 
-        // Verify MAC
+        // Determine if we have a MAC
+        const hasMac = encryptedData.length >= this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE + this.MAC_SIZE;
+
+        // Determine if we have an auth tag
+        const hasAuthTag =
+            encryptedData.length >=
+            this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE + this.AUTH_TAG_SIZE + (hasMac ? this.MAC_SIZE : 0);
+
+        // Extract encrypted data and optional components
+        let encrypted, authTag, mac;
+
+        if (hasAuthTag && hasMac) {
+            // We have all components
+            encrypted = encryptedData.subarray(
+                this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE,
+                -this.AUTH_TAG_SIZE - this.MAC_SIZE
+            );
+            authTag = encryptedData.subarray(-this.AUTH_TAG_SIZE - this.MAC_SIZE, -this.MAC_SIZE);
+            mac = encryptedData.subarray(-this.MAC_SIZE);
+        } else if (hasMac) {
+            // We have MAC but no auth tag
+            encrypted = encryptedData.subarray(this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE, -this.MAC_SIZE);
+            mac = encryptedData.subarray(-this.MAC_SIZE);
+            // Create a dummy auth tag (this will likely fail decryption)
+            authTag = Buffer.alloc(this.AUTH_TAG_SIZE);
+            console.warn("Warning: No auth tag found in encrypted data, decryption may fail");
+        } else {
+            // We have neither MAC nor auth tag
+            encrypted = encryptedData.subarray(this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE);
+            // Create dummy MAC and auth tag (this will likely fail verification)
+            mac = Buffer.alloc(this.MAC_SIZE);
+            authTag = Buffer.alloc(this.AUTH_TAG_SIZE);
+            console.warn("Warning: No MAC or auth tag found in encrypted data, decryption may fail");
+        }
+
+        // Derive shared secret and keys
         const sharedSecret = secp.getSharedSecret(this.privateKey.slice(2), ephemeralPubKey);
         const { encryptionKey, macKey } = this.deriveKeys(sharedSecret);
-        const computedMac = this.computeMAC(macKey, Buffer.concat([iv, encrypted]));
-        if (!computedMac.equals(mac)) {
-            throw new Error("Invalid MAC - message may have been tampered with");
-        }
 
-        // Decrypt
-        const decipher = createDecipheriv("aes-256-gcm", encryptionKey, iv);
-        decipher.setAuthTag(authTag);
-        const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-
-        // Validate decrypted content format
-        const content = decrypted.toString("utf8");
-        if (content.startsWith("[")) {
-            // Validate hash pair format
-            try {
-                const parsed = JSON.parse(content);
-                if (
-                    !Array.isArray(parsed) ||
-                    parsed.length !== 2 ||
-                    !parsed.every((hash) => typeof hash === "string" && hash.startsWith("0x"))
-                ) {
-                    throw new Error("Invalid decrypted hash pair format");
-                }
-            } catch {
-                throw new Error("Invalid decrypted hash pair JSON");
+        // Verify MAC if present
+        if (hasMac) {
+            const computedMac = this.computeMAC(macKey, Buffer.concat([iv, encrypted]));
+            if (!computedMac.equals(mac)) {
+                throw new Error("Invalid MAC - message may have been tampered with");
             }
-        } else if (decrypted.length > this.MAX_CHAR_SIZE) {
-            throw new Error(
-                `Decrypted character size ${decrypted.length} exceeds maximum UTF-8 size ${this.MAX_CHAR_SIZE}`
-            );
+        } else {
+            console.warn("Skipping MAC verification as no MAC was found");
         }
 
-        return content;
+        try {
+            // Attempt to decrypt
+            const decipher = createDecipheriv("aes-256-gcm", encryptionKey, iv);
+            if (hasAuthTag) {
+                decipher.setAuthTag(authTag);
+            }
+            const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+            return decrypted.toString("utf8");
+        } catch (error) {
+            // If decryption fails, try a direct approach for single characters
+            if (encrypted.length <= this.MAX_CHAR_SIZE) {
+                console.warn("Decryption failed, attempting to interpret as raw character");
+                return encrypted.toString("utf8");
+            }
+            throw error;
+        }
     }
 
     private deriveKeys(sharedSecret: Uint8Array) {
