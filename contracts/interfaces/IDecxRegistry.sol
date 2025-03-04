@@ -8,28 +8,28 @@ interface IDecxRegistry {
         @param character The UTF character to hash.
         @return The hash of the character.
     */
-    function addCharacterHash(string memory character) external returns (bytes32);
+    function addCharacterHash(string calldata character) external returns (bytes32);
 
     /**
         @notice Combine two hashes and add the composite hash to the decxregistry.
         @param hashes The array of hashes to combine.
         @return The composite hash of the two hashes.
     */
-    function addHashesHash(bytes32[2] memory hashes) external returns (bytes32);
+    function addHashesHash(bytes32[2] calldata hashes) external returns (bytes32);
 
     /**
         @notice Get the hash for a character.
         @param character The character to get the hash for.
         @return The hash of the character.
     */
-    function getHashForCharacter(string memory character) external view returns (bytes32);
+    function getHashForCharacter(string calldata character) external view returns (bytes32);
 
     /**
         @notice Get the composite hash for two hashes.
         @param hashes The array of hashes to combine.
         @return The composite hash of the two hashes.
     */
-    function getHashForHashes(bytes32[2] memory hashes) external view returns (bytes32);
+    function getHashForHashes(bytes32[2] calldata hashes) external view returns (bytes32);
 
     /**
         @notice Get the components of a hash.

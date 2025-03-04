@@ -10,14 +10,14 @@ contract DecxRegistry is IDecxRegistry {
     error DecxRegistry_ZeroHashNotAllowed();
 
     // State Variables
-    IUTF8Validator private utf8Validator;
+    IUTF8Validator private immutable utf8Validator;
     mapping(bytes32 => bool) public hashExistsMap;
     mapping(string => bytes32) public hashLookupMap;
     mapping(bytes32 => bytes32) public hashesLookupMap;
     mapping(bytes32 => bytes32[2]) public encryptionPathsMap;
 
-    constructor(address _utf8ValidatorAddress) {
-        utf8Validator = IUTF8Validator(_utf8ValidatorAddress);
+    constructor(IUTF8Validator _utf8ValidatorAddress) {
+        utf8Validator = _utf8ValidatorAddress;
     }
 
     /**
@@ -25,7 +25,7 @@ contract DecxRegistry is IDecxRegistry {
         @param character The UTF character to hash.
         @return The hash of the character.
     */
-    function addCharacterHash(string memory character) external returns (bytes32) {
+    function addCharacterHash(string calldata character) external returns (bytes32) {
         // Validate UTF8 character
         utf8Validator.validateCharacter(character);
 
@@ -50,7 +50,7 @@ contract DecxRegistry is IDecxRegistry {
         @param hashes The array of hashes to combine.
         @return The composite hash of the two hashes.
     */
-    function addHashesHash(bytes32[2] memory hashes) external returns (bytes32) {
+    function addHashesHash(bytes32[2] calldata hashes) external returns (bytes32) {
         // ensure hashes are not zero
         if (hashes[0] == bytes32(0) || hashes[1] == bytes32(0)) {
             revert DecxRegistry_ZeroHashNotAllowed();
@@ -87,7 +87,7 @@ contract DecxRegistry is IDecxRegistry {
         @param character The character to get the hash for.
         @return The hash of the character.
     */
-    function getHashForCharacter(string memory character) external view returns (bytes32) {
+    function getHashForCharacter(string calldata character) external view returns (bytes32) {
         return hashLookupMap[character];
     }
 
@@ -96,7 +96,7 @@ contract DecxRegistry is IDecxRegistry {
         @param hashes The array of hashes to combine.
         @return The hash of the two hashes.
     */
-    function getHashForHashes(bytes32[2] memory hashes) external view returns (bytes32) {
+    function getHashForHashes(bytes32[2] calldata hashes) external view returns (bytes32) {
         return hashesLookupMap[keccak256(abi.encode(hashes))];
     }
 

@@ -10,7 +10,7 @@ contract DecxDAG {
 
     // State Variables
     DecxRegistry private decxRegistry;
-    uint256 private pathIndex;
+    uint256 private nextPathIndex;
 
     // Events
     /**
@@ -31,7 +31,7 @@ contract DecxDAG {
     // Constructor
     constructor(address _decxRegistry) {
         decxRegistry = DecxRegistry(_decxRegistry);
-        pathIndex = 0;
+        nextPathIndex = 0;
     }
 
     // Functions
@@ -43,7 +43,7 @@ contract DecxDAG {
         @param input The text string to be converted into a hash
         @return A single 32-byte hash that uniquely represents the entire input string
     */
-    function press(string memory input) public returns (bytes32) {
+    function press(string calldata input) external returns (bytes32) {
         bytes memory stringBytes = bytes(input);
         uint256 stringLength = stringBytes.length;
 
@@ -94,7 +94,7 @@ contract DecxDAG {
             hashes[charCount] = hash;
 
             // Emit event for character hash with dummy component
-            emit EncryptionPathCreated(hash, [hash, bytes32(0)], pathIndex++);
+            emit EncryptionPathCreated(hash, [hash, bytes32(0)], nextPathIndex++);
 
             i += charLen;
             charCount++;
@@ -126,7 +126,7 @@ contract DecxDAG {
                 newHashes[i/2] = hash;
 
                 // Emit event for combined hash
-                emit EncryptionPathCreated(hash, components, pathIndex++);
+                emit EncryptionPathCreated(hash, components, nextPathIndex++);
             }
 
             // Handle last element if odd length

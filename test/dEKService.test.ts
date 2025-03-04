@@ -74,7 +74,7 @@ describe("DEKService", function () {
     });
 
     describe("Error Handling", function () {
-        it("should fail to decrypt with invalid hash. Output error message:", async function () {
+        it("should fail to decrypt with invalid hash. Expected output error message:", async function () {
             const { dEKService } = await loadFixture(deployFixture);
             const invalidHash = "0x" + "1".repeat(64);
             await expect(dEKService.release(invalidHash)).to.be.rejectedWith(
