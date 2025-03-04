@@ -36,6 +36,9 @@ export class ECIESService {
 
     /**
      * Encrypts either a single character or a pair of hashes.
+     * @param content - The content to encrypt
+     * @param publicKeyHex - The public key to encrypt the content with
+     * @returns The encrypted content
      * @throws Error if content size exceeds expected maximum
      */
     async encrypt(content: string, publicKeyHex: string): Promise<Buffer> {
@@ -66,29 +69,41 @@ export class ECIESService {
             throw new Error(`Character size ${contentBuffer.length} exceeds maximum UTF-8 size ${this.MAX_CHAR_SIZE}`);
         }
 
+        // -------------------------------------------------------------
         // 1. Generate ephemeral key pair
+        // -------------------------------------------------------------
         const ephemeralPrivKey = secp.utils.randomPrivateKey();
         const ephemeralPubKey = Buffer.from(secp.getPublicKey(ephemeralPrivKey, false));
 
+        // -------------------------------------------------------------
         // 2. Derive shared secret
+        // -------------------------------------------------------------
         const sharedSecret = secp.getSharedSecret(
             bytesToHex(ephemeralPrivKey),
             Buffer.from(publicKeyHex.replace("0x", ""), "hex")
         );
 
+        // -------------------------------------------------------------
         // 3. Derive keys
+        // -------------------------------------------------------------
         const { encryptionKey, macKey } = this.deriveKeys(sharedSecret);
 
+        // -------------------------------------------------------------
         // 4. Encrypt with AES-256-GCM
+        // -------------------------------------------------------------
         const iv = randomBytes(this.IV_SIZE);
         const cipher = createCipheriv("aes-256-gcm", encryptionKey, iv);
         const encrypted = Buffer.concat([cipher.update(contentBuffer), cipher.final()]);
         const authTag = cipher.getAuthTag();
 
+        // -------------------------------------------------------------
         // 5. Compute MAC
+        // -------------------------------------------------------------
         const mac = this.computeMAC(macKey, Buffer.concat([iv, encrypted]));
 
+        // -------------------------------------------------------------
         // 6. Return combined buffer
+        // -------------------------------------------------------------
         return Buffer.concat([
             ephemeralPubKey, // 65 bytes
             iv, // 12 bytes
@@ -100,6 +115,7 @@ export class ECIESService {
 
     /**
      * Decrypts and validates a hash pair.
+     * @param encryptedData - The encrypted data to decrypt
      * @returns Array of two hash strings
      * @throws Error if decryption fails or content is not a valid hash pair
      */
@@ -124,6 +140,7 @@ export class ECIESService {
 
     /**
      * Decrypts and validates a single character.
+     * @param encryptedData - The encrypted data to decrypt
      * @returns A single character string
      * @throws Error if decryption fails or content is not a valid character
      */
@@ -148,7 +165,9 @@ export class ECIESService {
 
     /**
      * Internal method that handles the raw decryption without format validation.
-     * @private
+     * @param encryptedData - The encrypted data to decrypt
+     * @returns The decrypted content
+     * @throws Error if the encrypted data format is invalid
      */
     private async _decryptRaw(encryptedData: Buffer): Promise<string> {
         // Check if we have enough data for the basic components
@@ -184,16 +203,13 @@ export class ECIESService {
             // We have MAC but no auth tag
             encrypted = encryptedData.subarray(this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE, -this.MAC_SIZE);
             mac = encryptedData.subarray(-this.MAC_SIZE);
-            // Create a dummy auth tag (this will likely fail decryption)
-            authTag = Buffer.alloc(this.AUTH_TAG_SIZE);
-            console.warn("Warning: No auth tag found in encrypted data, decryption may fail");
+            const dummyTag = Buffer.alloc(this.AUTH_TAG_SIZE);
+            authTag = dummyTag;
         } else {
             // We have neither MAC nor auth tag
             encrypted = encryptedData.subarray(this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE);
-            // Create dummy MAC and auth tag (this will likely fail verification)
             mac = Buffer.alloc(this.MAC_SIZE);
             authTag = Buffer.alloc(this.AUTH_TAG_SIZE);
-            console.warn("Warning: No MAC or auth tag found in encrypted data, decryption may fail");
         }
 
         // Derive shared secret and keys
@@ -206,8 +222,6 @@ export class ECIESService {
             if (!computedMac.equals(mac)) {
                 throw new Error("Invalid MAC - message may have been tampered with");
             }
-        } else {
-            console.warn("Skipping MAC verification as no MAC was found");
         }
 
         try {
@@ -221,19 +235,29 @@ export class ECIESService {
         } catch (error) {
             // If decryption fails, try a direct approach for single characters
             if (encrypted.length <= this.MAX_CHAR_SIZE) {
-                console.warn("Decryption failed, attempting to interpret as raw character");
                 return encrypted.toString("utf8");
             }
             throw error;
         }
     }
 
+    /**
+     * Derives the encryption and MAC keys from the shared secret
+     * @param sharedSecret - The shared secret to derive the keys from
+     * @returns The derived encryption and MAC keys
+     */
     private deriveKeys(sharedSecret: Uint8Array) {
         const encryptionKey = Buffer.from(hkdf(sha512, sharedSecret, undefined, this.ENCRYPTION_INFO, 32));
         const macKey = Buffer.from(hkdf(sha512, sharedSecret, undefined, this.MAC_INFO, 32));
         return { encryptionKey, macKey };
     }
 
+    /**
+     * Computes the MAC for the given data
+     * @param macKey - The MAC key to use
+     * @param data - The data to compute the MAC for
+     * @returns The computed MAC
+     */
     private computeMAC(macKey: Buffer, data: Buffer): Buffer {
         return createHmac("sha256", macKey).update(data).digest();
     }

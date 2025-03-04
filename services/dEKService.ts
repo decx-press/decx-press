@@ -2,36 +2,42 @@
 import { Contract, ethers, EventLog, Log, Result } from "ethers";
 import { ECIESService } from "./encryption/ECIESService";
 
+/**
+ * EncryptionPathEvent is the event for the EncryptionPathCreated event.
+ */
 interface EncryptionPathEvent {
     hash: string;
     components: string[];
-    index: number; // Explicitly number type after conversion from BigInt
+    index: number;
 }
 
+/**
+ * EncryptedContent is the content to be encrypted.
+ */
 interface EncryptedContent {
     hash: string;
     encryptedContent: Buffer;
 }
 
+/**
+ * EncryptedDataStoredEventArgs is the event args for the EncryptedDataStored event.
+ */
 interface EncryptedDataStoredEventArgs extends Result {
     hash: string;
     encryptedPayload: Buffer;
 }
 
+/**
+ * EncryptedDataStoredEvent is the event for the EncryptedDataStored event.
+ */
 type EncryptedDataStoredEvent = EventLog & {
     args: EncryptedDataStoredEventArgs;
 };
 
-interface CharacterHashedEventArgs extends Result {
-    character: string;
-    hash: string;
-}
-
-type CharacterHashedEvent = EventLog & {
-    args: CharacterHashedEventArgs;
-};
-
-export class DecxPressService {
+/**
+ * decx Encryption Key Service (dEKService) is a service that allows you to press and release content using the decx.press protocol.
+ */
+export class DEKService {
     private contentMap: Map<string, number>;
     private hashToCharMap: Map<string, string>; // Map from hash to character
     private originalContent: string = ""; // Initialize with empty string
@@ -45,10 +51,12 @@ export class DecxPressService {
         this.hashToCharMap = new Map();
     }
 
+    /**
+     * Press the content and get the final hash
+     * @param content - The content to press
+     * @returns The final hash
+     */
     async press(content: string): Promise<string> {
-        // console.log("\n=== Starting Press Operation ===");
-        // console.log("Original content:", content);
-
         // Store original content for later use
         this.originalContent = content;
 
@@ -56,13 +64,15 @@ export class DecxPressService {
         this.contentMap.clear();
         this.hashToCharMap.clear();
 
+        // -------------------------------------------------------------
         // 1. Call DecxDAG to process content and get hash
-        // console.log("\nCalling DecxDAG.press...");
+        // -------------------------------------------------------------
         const tx = await this.decxDAG.press(content);
         const receipt = await tx.wait();
 
+        // -------------------------------------------------------------
         // 2. Extract and sort encryption path events
-        // console.log("\nProcessing EncryptionPathCreated events:");
+        // -------------------------------------------------------------
         const pathEvents: EncryptionPathEvent[] = receipt.logs
             .filter((log: any) => log.fragment?.name === "EncryptionPathCreated")
             .map((log: any) => ({
@@ -71,14 +81,6 @@ export class DecxPressService {
                 index: Number(log.args.index) // Convert BigInt to number
             }))
             .sort((a: EncryptionPathEvent, b: EncryptionPathEvent) => a.index - b.index);
-
-        // console.log(`Found ${pathEvents.length} path events:`);
-        // pathEvents.forEach((event, i) => {
-        //     console.log(`\nEvent ${i + 1}:`);
-        //     console.log(`  Hash: ${event.hash}`);
-        //     console.log(`  Components: [${event.components[0]}, ${event.components[1]}]`);
-        //     console.log(`  Index: ${event.index}`);
-        // });
 
         // Find leaf nodes (character hashes) and map them to characters
         // The first N events (where N = content.length) are leaf nodes in order
@@ -92,11 +94,11 @@ export class DecxPressService {
             }
         }
 
+        // -------------------------------------------------------------
         // 3. For each hash in the path, encrypt and emit
-        // console.log("\nEncrypting and storing content for each hash:");
+        // -------------------------------------------------------------
         for (const event of pathEvents) {
             const { hash, components } = event;
-            // console.log(`\nProcessing hash: ${hash}`);
 
             let contentToEncrypt: string;
             const isLeafNode = components[1] === ethers.ZeroHash;
@@ -108,34 +110,37 @@ export class DecxPressService {
                     throw new Error(`Cannot find character for hash ${hash}`);
                 }
                 contentToEncrypt = char;
-                // console.log(`  Found leaf node with character: '${contentToEncrypt}' for hash ${hash}`);
             } else {
                 // Inner node - encrypt the component hashes as a pair
                 contentToEncrypt = JSON.stringify(components);
-                // console.log(`  Found inner node with components: [${components[0]}, ${components[1]}]`);
             }
 
             // Encrypt content for this hash
-            // console.log(`  Encrypting content: ${contentToEncrypt}`);
             const encryptedContent = await this.eciesService.encrypt(contentToEncrypt, this.recipientPublicKey);
 
             // Emit encrypted content
-            // console.log(`  Storing encrypted content for hash ${hash}`);
             await this.decxDAG.storeEncryptedData(hash, encryptedContent);
         }
 
         // Return final hash
         const finalHash = pathEvents[pathEvents.length - 1].hash;
-        // console.log("\n=== Press Operation Complete ===");
-        // console.log("Final hash:", finalHash);
         return finalHash;
     }
 
+    /**
+     * Release the original content from the final hash
+     * @param finalHash - The final hash to release the content from
+     * @returns The original content
+     */
     async release(finalHash: string): Promise<string> {
+        // -------------------------------------------------------------
         // 1. Get encryption path from DecxDAG
+        // -------------------------------------------------------------
         const path = await this.getEncryptionPath(finalHash);
 
+        // -------------------------------------------------------------
         // 2. Get encrypted content for each hash
+        // -------------------------------------------------------------
         const encryptedContents = await Promise.all(
             path.map(async (hash) => {
                 const filter = this.decxDAG.filters.EncryptedDataStored(hash);
@@ -151,11 +156,18 @@ export class DecxPressService {
                 };
             })
         );
-        // console.log("Encrypted contents:", encryptedContents);
+
+        // -------------------------------------------------------------
         // 3. Decrypt and reconstruct content
+        // -------------------------------------------------------------
         return this.reconstructContent(encryptedContents);
     }
 
+    /**
+     * Get the encryption path for a given final hash
+     * @param finalHash - The final hash to get the path for
+     * @returns The encryption path for the given hash
+     */
     private async getEncryptionPath(finalHash: string): Promise<string[]> {
         const path: string[] = [];
         const visited = new Set<string>();
@@ -183,6 +195,11 @@ export class DecxPressService {
         return path;
     }
 
+    /**
+     * Reconstruct the original content from the encrypted contents
+     * @param encryptedContents - The encrypted contents to reconstruct the content from
+     * @returns The original content
+     */
     private async reconstructContent(encryptedContents: EncryptedContent[]): Promise<string> {
         const pairMap = new Map<string, string[]>();
         const contentMap = new Map<string, string>();
@@ -198,22 +215,16 @@ export class DecxPressService {
                     // This is a leaf node - decrypt as a character
                     const character = await this.eciesService.decryptCharacter(encryptedContent);
                     contentMap.set(hash, character);
-                    // console.log(`Stored leaf node character for ${hash}: ${character}`);
                 } else {
                     // This is a pair - decrypt as a pair of hashes
                     const pairComponents = await this.eciesService.decryptPairs(encryptedContent);
                     pairMap.set(hash, pairComponents);
-                    // console.log(`Stored pair for ${hash}: [${pairComponents[0]}, ${pairComponents[1]}]`);
                 }
             } catch (error) {
                 console.error(`Error decrypting content for hash ${hash}:`, error);
                 throw error;
             }
         }
-
-        // console.log("\nFinal Maps:");
-        // console.log("PairMap:", Object.fromEntries(pairMap));
-        // console.log("ContentMap:", Object.fromEntries(contentMap));
 
         // Second pass: resolve pairs if any exist
         if (pairMap.size > 0) {
@@ -228,6 +239,12 @@ export class DecxPressService {
         return singleContent;
     }
 
+    /**
+     * Resolve the pairs in the pair map
+     * @param pairMap - The pair map to resolve
+     * @param contentMap - The content map to resolve the pairs from
+     * @returns The original content
+     */
     private resolvePairs(pairMap: Map<string, string[]>, contentMap: Map<string, string>): string {
         // -------------------------------------------------------------
         // 1. Identify the correct root of the DAG/tree:
@@ -256,8 +273,6 @@ export class DecxPressService {
             throw new Error("No valid root found in pairMap");
         }
 
-        // console.log("\nStarting resolution from root hash:", rootHash);
-
         // -------------------------------------------------------------
         // 2. Depth-first resolution from the discovered root
         // -------------------------------------------------------------
@@ -268,14 +283,11 @@ export class DecxPressService {
 
         const resolveHash = (hash: string, position: number) => {
             depth++;
-            // const indent = "  ".repeat(depth);
-            // console.log(`${indent}Resolving hash ${hash} at position ${position} (depth: ${depth})`);
 
             if (visited.has(hash)) {
                 if (contentMap.has(hash)) {
                     characters.set(position, contentMap.get(hash)!);
                     maxIndex = Math.max(maxIndex, position);
-                    // console.log(`${indent}Found leaf content: ${contentMap.get(hash)} at position ${position}`);
                 }
                 depth--;
                 return;
@@ -287,7 +299,6 @@ export class DecxPressService {
                 const content = contentMap.get(hash)!;
                 characters.set(position, content);
                 maxIndex = Math.max(maxIndex, position);
-                // console.log(`${indent}Found leaf content: ${content} at position ${position}`);
                 depth--;
                 return;
             }
@@ -295,10 +306,8 @@ export class DecxPressService {
             // Otherwise, this hash must be an inner pair
             const pair = pairMap.get(hash);
             if (!pair) {
-                // console.log(`${indent}ERROR: Cannot find content or pair for hash ${hash}`);
                 throw new Error(`Cannot find content or pair for hash ${hash}`);
             }
-            // console.log(`${indent}Found pair: [${pair[0]}, ${pair[1]}]`);
 
             // If pair[1] is ZeroHash, it's just a single child
             if (pair[1] === ethers.ZeroHash) {
@@ -315,8 +324,6 @@ export class DecxPressService {
 
         // Finally, recursively resolve from the "true root"
         resolveHash(rootHash, 0);
-
-        // console.log("\nFinal character positions:", Object.fromEntries(characters));
 
         // Convert position→character map to a string
         return Array.from({ length: maxIndex + 1 })

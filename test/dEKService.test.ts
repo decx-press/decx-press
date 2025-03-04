@@ -1,12 +1,12 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { DecxPressService } from "../services/dEKService";
+import { DEKService } from "../services/dEKService";
 import { ECIESService } from "../services/encryption/ECIESService";
 import * as secp from "@noble/secp256k1";
 import { EventLog } from "ethers";
 
-describe("dEKService", function () {
+describe("DEKService", function () {
     // Test key pair for encryption/decryption
     const privateKey = "0x" + "1".repeat(64); // Simple test private key
     const publicKey = "0x" + Buffer.from(secp.getPublicKey(privateKey.slice(2), false)).toString("hex");
@@ -24,7 +24,7 @@ describe("dEKService", function () {
 
         // Create the services
         const eciesService = new ECIESService(privateKey);
-        const dEKService = new DecxPressService(decxDAGContract, eciesService, publicKey);
+        const dEKService = new DEKService(decxDAGContract, eciesService, publicKey);
 
         return { decxDAGContract, dEKService };
     }
@@ -47,7 +47,7 @@ describe("dEKService", function () {
 
         it("should handle multi-byte UTF-8 characters", async function () {
             const { dEKService } = await loadFixture(deployFixture);
-            const testString = "Hello 👋 World 🌍!";
+            const testString = "Hellø 👋 World 🌍!";
 
             const finalHash = await dEKService.press(testString);
             const decrypted = await dEKService.release(finalHash);
@@ -74,7 +74,7 @@ describe("dEKService", function () {
     });
 
     describe("Error Handling", function () {
-        it("should fail to decrypt with invalid hash", async function () {
+        it("should fail to decrypt with invalid hash. Output error message:", async function () {
             const { dEKService } = await loadFixture(deployFixture);
             const invalidHash = "0x" + "1".repeat(64);
             await expect(dEKService.release(invalidHash)).to.be.rejectedWith(
@@ -82,7 +82,7 @@ describe("dEKService", function () {
                 "No encrypted data found for hash 0x1111111111111111111111111111111111111111111111111111111111111111"
             );
         });
-        it("should fail to decrypt tampered encrypted data", async function () {
+        it("should fail to decrypt tampered encrypted data.", async function () {
             const { dEKService, decxDAGContract } = await loadFixture(deployFixture);
             const testString = "Hello";
             // Encrypt normally
@@ -123,13 +123,12 @@ describe("dEKService", function () {
             // Get initial event count
             const initialEvents = await decxDAGContract.queryFilter(decxDAGContract.filters.EncryptedDataStored());
 
-            // Press the content using the service (NOT the contract directly)
+            // Press the content using the service
             const finalHash = await dEKService.press(testString);
 
             // Get final event count
             const finalEvents = await decxDAGContract.queryFilter(decxDAGContract.filters.EncryptedDataStored());
 
-            // We expect 5 new events
             expect(finalEvents.length - initialEvents.length).to.equal(5);
         });
     });
