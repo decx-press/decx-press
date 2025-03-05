@@ -11,25 +11,19 @@ const isCoverage = process.env.COVERAGE === "true";
 
 describe("DecxDAG", function () {
     async function deployDecxDAGFixture() {
-        const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
-        const decxRegistryContract = await DecxRegistry.deploy();
-
+        // Deploy UTF8Validator first
         const UTF8Validator = await ethers.getContractFactory("UTF8Validator");
         const utf8ValidatorContract = await UTF8Validator.deploy();
 
-        const Character2Hash = await ethers.getContractFactory("Character2Hash");
-        const character2HashContract = await Character2Hash.deploy(
-            decxRegistryContract.target,
-            utf8ValidatorContract.target
-        );
+        // Deploy DecxRegistry with UTF8Validator
+        const DecxRegistry = await ethers.getContractFactory("DecxRegistry");
+        const decxRegistryContract = await DecxRegistry.deploy(utf8ValidatorContract.target);
 
-        const Hashes2Hash = await ethers.getContractFactory("Hashes2Hash");
-        const hashes2HashContract = await Hashes2Hash.deploy(decxRegistryContract.target);
-
+        // Deploy DecxDAG with DecxRegistry
         const DecxDAG = await ethers.getContractFactory("DecxDAG");
-        const decxDAGContract = await DecxDAG.deploy(character2HashContract.target, hashes2HashContract.target);
+        const decxDAGContract = await DecxDAG.deploy(decxRegistryContract.target);
 
-        return { decxDAGContract, character2HashContract, hashes2HashContract, decxRegistryContract };
+        return { decxDAGContract, utf8ValidatorContract, decxRegistryContract };
     }
 
     describe("Deployment", function () {
@@ -276,5 +270,105 @@ describe("DecxDAG", function () {
                 expect(totalGasUsed).to.be.greaterThan(BigInt(gasLimit));
             }
         );
+    });
+
+    describe("Encryption Path Events", function () {
+        it("should emit EncryptionPathCreated events with incrementing pathIndex", async function () {
+            const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
+            const testString = "ab"; // Simple 2-character string
+
+            const tx = await decxDAGContract.press(testString);
+            const receipt = await tx.wait();
+
+            // Filter EncryptionPathCreated events
+            const events = receipt.logs
+                .filter((log: any) => log.fragment?.name === "EncryptionPathCreated")
+                .map((log: any) => ({
+                    hash: log.args.hash,
+                    components: log.args.components,
+                    index: log.args.index
+                }));
+
+            // Should have 3 events: 2 for characters and 1 for their combination
+            expect(events).to.have.length(3);
+
+            // Verify pathIndex increments
+            expect(events[0].index).to.equal(0);
+            expect(events[1].index).to.equal(1);
+            expect(events[2].index).to.equal(2);
+
+            // First two events should be character hashes with [hash, 0x0] components
+            expect(events[0].components[1]).to.equal(ethers.ZeroHash);
+            expect(events[1].components[1]).to.equal(ethers.ZeroHash);
+
+            // Last event should combine the first two hashes
+            expect(events[2].components[0]).to.equal(events[0].hash);
+            expect(events[2].components[1]).to.equal(events[1].hash);
+        });
+
+        it("should maintain correct pathIndex across multiple press calls", async function () {
+            const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
+
+            // First press call
+            const tx1 = await decxDAGContract.press("a");
+            const receipt1 = await tx1.wait();
+
+            // Second press call
+            const tx2 = await decxDAGContract.press("b");
+            const receipt2 = await tx2.wait();
+
+            const events1 = receipt1.logs
+                .filter((log: any) => log.fragment?.name === "EncryptionPathCreated")
+                .map((log: any) => log.args.index);
+
+            const events2 = receipt2.logs
+                .filter((log: any) => log.fragment?.name === "EncryptionPathCreated")
+                .map((log: any) => log.args.index);
+
+            // First call should start at 0
+            expect(events1[0]).to.equal(0);
+
+            // Second call should continue from where first call left off
+            expect(events2[0]).to.equal(1);
+        });
+    });
+
+    describe("Encrypted Data Storage", function () {
+        it("should emit EncryptedDataStored event with correct hash and payload", async function () {
+            const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
+
+            // First create a hash
+            const tx = await decxDAGContract.press("a");
+            const receipt = await tx.wait();
+
+            // Get the hash from the EncryptionPathCreated event
+            const event = receipt.logs.find((log: any) => log.fragment?.name === "EncryptionPathCreated");
+            const hash = event.args.hash;
+
+            // Store encrypted data
+            const encryptedPayload = ethers.toUtf8Bytes("test-encrypted-data");
+            const storeTx = await decxDAGContract.storeEncryptedData(hash, encryptedPayload);
+            const storeReceipt = await storeTx.wait();
+
+            // Find EncryptedDataStored event
+            const storedEvent = storeReceipt.logs.find((log: any) => log.fragment?.name === "EncryptedDataStored");
+            expect(storedEvent).to.exist;
+            expect(storedEvent.args.hash).to.equal(hash);
+
+            // Convert the event args from hex to Uint8Array for comparison
+            const eventPayload = ethers.getBytes(storedEvent.args.encryptedPayload);
+            expect(eventPayload).to.deep.equal(encryptedPayload);
+        });
+
+        it("should revert when storing encrypted data for non-existent hash", async function () {
+            const { decxDAGContract } = await loadFixture(deployDecxDAGFixture);
+
+            const nonExistentHash = ethers.keccak256(ethers.toUtf8Bytes("non-existent"));
+            const encryptedPayload = ethers.toUtf8Bytes("test-encrypted-data");
+
+            await expect(
+                decxDAGContract.storeEncryptedData(nonExistentHash, encryptedPayload)
+            ).to.be.revertedWithCustomError(decxDAGContract, "DecxDAG_HashDoesNotExist");
+        });
     });
 });
