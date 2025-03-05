@@ -53,5 +53,9 @@
         "prettier": "^3.4.2",
         "prettier-plugin-solidity": "^1.4.2",
         "solidity-coverage": "^0.8.14"
+    },
+    "overrides": {
+        "elliptic": ">=6.6.1",
+        "ws": ">=7.5.10"
     }
 }
