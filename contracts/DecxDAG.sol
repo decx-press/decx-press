@@ -70,18 +70,17 @@ contract DecxDAG {
     */
     function convertStringToHashes(bytes memory stringBytes) private returns (bytes32[] memory hashes, uint256 charCount) {
         uint256 stringLength = stringBytes.length;
-        uint256 maxChars = stringLength; // Worst case: all single-byte characters
-        hashes = new bytes32[](maxChars);
+        hashes = new bytes32[](stringLength);
         charCount = 0;
 
         // Process each character
         for (uint256 i = 0; i < stringLength;) {
             // Extract the next character
             uint256 charLen;
-            if ((stringBytes[i] & 0xf8) == 0xf0) charLen = 4;      // 4-byte character
-            else if ((stringBytes[i] & 0xf0) == 0xe0) charLen = 3; // 3-byte character
+            if ((stringBytes[i] & 0x80) == 0x00) charLen = 1;      // 1-byte character
             else if ((stringBytes[i] & 0xe0) == 0xc0) charLen = 2; // 2-byte character
-            else charLen = 1;                                       // 1-byte character
+            else if ((stringBytes[i] & 0xf0) == 0xe0) charLen = 3; // 3-byte character
+            else charLen = 4;                                      // 4-byte character
 
             bytes memory charBytes = new bytes(charLen);
             for (uint256 j = 0; j < charLen; j++) {
@@ -115,30 +114,22 @@ contract DecxDAG {
         uint256 currentLength = length;
 
         while (currentLength > 1) {
-            // Create new array of half size (rounded up)
-            uint256 newLength = (currentLength + 1) / 2;
-            bytes32[] memory newHashes = new bytes32[](newLength);
-
-            // Process pairs
+            uint256 writeIndex = 0;
             for (uint256 i = 0; i + 1 < currentLength; i += 2) {
                 bytes32[2] memory components = [hashes[i], hashes[i + 1]];
                 bytes32 hash = decxRegistry.addHashesHash(components);
-                newHashes[i/2] = hash;
+                hashes[writeIndex] = hash;
 
-                // Emit event for combined hash
                 emit EncryptionPathCreated(hash, components, nextPathIndex++);
+                writeIndex++;
             }
-
-            // Handle last element if odd length
+            // If odd length, carry forward last unpaired hash
             if (currentLength % 2 == 1) {
-                newHashes[newLength - 1] = hashes[currentLength - 1];
+                hashes[writeIndex] = hashes[currentLength - 1];
+                writeIndex++;
             }
-
-            // Update for next iteration
-            hashes = newHashes;
-            currentLength = newLength;
+            currentLength = writeIndex;
         }
-
         return hashes[0];
     }
 

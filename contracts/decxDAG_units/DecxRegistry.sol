@@ -71,7 +71,7 @@ contract DecxRegistry is IDecxRegistry {
         }
 
         // Encode the hashes and hash them as a single hash
-        bytes32 hashesHash = keccak256(abi.encode(hash1, hash2));
+        bytes32 hashesHash = keccak256(abi.encodePacked(hash1, hash2));
 
         // add the composite hash to the hash & lookup mappings
         hashExistsMap[hashesHash] = true;
