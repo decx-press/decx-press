@@ -13,7 +13,7 @@ contract DecxRegistry is IDecxRegistry {
     IUTF8Validator private immutable utf8Validator;
     mapping(bytes32 => bool) public hashExistsMap;
     mapping(string => bytes32) public hashLookupMap;
-    mapping(bytes32 => bytes32) public hashesLookupMap;
+    mapping(bytes32 => mapping(bytes32 => bytes32)) public hashesLookupMap;
     mapping(bytes32 => bytes32[2]) public encryptionPathsMap;
 
     constructor(IUTF8Validator _utf8ValidatorAddress) {
@@ -51,32 +51,31 @@ contract DecxRegistry is IDecxRegistry {
         @return The composite hash of the two hashes.
     */
     function addHashesHash(bytes32[2] calldata hashes) external returns (bytes32) {
+        bytes32 hash1 = hashes[0];
+        bytes32 hash2 = hashes[1];
+
         // ensure hashes are not zero
-        if (hashes[0] == bytes32(0) || hashes[1] == bytes32(0)) {
+        if (hash1 == bytes32(0) || hash2 == bytes32(0)) {
             revert DecxRegistry_ZeroHashNotAllowed();
         }
 
         // ensure both hashes exist before proceeding
-        if (!hashExistsMap[hashes[0]] || !hashExistsMap[hashes[1]]) {
+        if (!hashExistsMap[hash1] || !hashExistsMap[hash2]) {
             revert DecxRegistry_InvalidHash();
         }
 
-        // Encode once and use for both keys
-        bytes memory encoded = abi.encode(hashes[0], hashes[1]);
-
-        // Create composite key and check if it exists
-        bytes32 compositeKey = keccak256(encoded);
-        bytes32 existingHash = hashesLookupMap[compositeKey];
+        // Check if the composite hash already exists
+        bytes32 existingHash = hashesLookupMap[hash1][hash2];
         if (existingHash != bytes32(0)) {
             return existingHash;
         }
 
-        // Use the same encoding for the hash
-        bytes32 hashesHash = keccak256(encoded);
+        // Encode the hashes and hash them as a single hash
+        bytes32 hashesHash = keccak256(abi.encode(hash1, hash2));
 
         // add the composite hash to the hash & lookup mappings
         hashExistsMap[hashesHash] = true;
-        hashesLookupMap[compositeKey] = hashesHash;
+        hashesLookupMap[hash1][hash2] = hashesHash;
         encryptionPathsMap[hashesHash] = hashes;
 
         return hashesHash;
@@ -97,7 +96,7 @@ contract DecxRegistry is IDecxRegistry {
         @return The hash of the two hashes.
     */
     function getHashForHashes(bytes32[2] calldata hashes) external view returns (bytes32) {
-        return hashesLookupMap[keccak256(abi.encode(hashes))];
+        return hashesLookupMap[hashes[0]][hashes[1]];
     }
 
     /**
