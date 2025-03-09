@@ -12,16 +12,21 @@ contract UTF8Validator is IUTF8Validator {
         bytes1 firstByte = b[0];
 
         // Determine expected length from first byte
-        if (firstByte >= 0xF0) {
-            if (l != 4) revert UTF8_InvalidCharacter();
-        } else if (firstByte >= 0xE0) {
-            if (l != 3) revert UTF8_InvalidCharacter();
-        } else if (firstByte >= 0xC0) {
-            if (l != 2) revert UTF8_InvalidCharacter();
-        } else if (firstByte >= 0x80) {
+        if (firstByte < 0x80) {
+            // Single-byte (ASCII)
+            if (l != 1) revert UTF8_InvalidCharacter();
+        } else if (firstByte < 0xC0) {
+            // 10xxxxxx as first byte → invalid
             revert UTF8_InvalidLeadingByte();
-        } else if (l != 1) {
-            revert UTF8_InvalidCharacter();
+        } else if (firstByte < 0xE0) {
+            // 110xxxxx
+            if (l != 2) revert UTF8_InvalidCharacter();
+        } else if (firstByte < 0xF0) {
+            // 1110xxxx
+            if (l != 3) revert UTF8_InvalidCharacter();
+        } else {
+            // >= 0xF0 → 11110xxx
+            if (l != 4) revert UTF8_InvalidCharacter();
         }
 
         // Multi-byte path
