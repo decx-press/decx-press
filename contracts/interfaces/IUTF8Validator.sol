@@ -14,5 +14,5 @@ interface IUTF8Validator {
     /// @notice Validates a single UTF-8 character
     /// @dev Checks for valid UTF-8 encoding and disallows control characters
     /// @param character The string containing exactly one UTF-8 character
-    function validateCharacter(string memory character) external pure;
+    function validateCharacter(string calldata character) external pure;
 }

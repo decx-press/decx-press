@@ -15,10 +15,6 @@ export class ECIESService {
     private readonly AUTH_TAG_SIZE = 16; // AES-GCM auth tag size
     private readonly MAC_SIZE = 32; // HMAC-SHA256 size
     private readonly HASH_SIZE = 32; // Size of each hash
-    private readonly AES_BLOCK_SIZE = 16; // AES block size for padding
-
-    // Total overhead size (everything except encrypted content)
-    private readonly OVERHEAD_SIZE = this.EPHEMERAL_PUBKEY_SIZE + this.IV_SIZE + this.AUTH_TAG_SIZE + this.MAC_SIZE;
 
     // Maximum sizes for our two types of content
     private readonly MAX_CHAR_SIZE = 4; // Maximum UTF-8 character size
