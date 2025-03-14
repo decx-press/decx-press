@@ -21,6 +21,7 @@
         "prepare": "husky",
         "start:api": "ts-node api/server.ts",
         "test:api": "node api/test-client.js",
+        "test:api:gas": "node api/test-client.js --report-gas",
         "balance": "chmod +x scripts/balance.sh && ./scripts/balance.sh"
     },
     "husky": {
