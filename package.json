@@ -18,7 +18,10 @@
         "node": "hardhat node",
         "format": "prettier . --write --plugin=prettier-plugin-solidity",
         "lint-staged": "lint-staged",
-        "prepare": "husky"
+        "prepare": "husky",
+        "start:api": "ts-node api/server.ts",
+        "test:api": "node api/test-client.js",
+        "balance": "chmod +x scripts/balance.sh && ./scripts/balance.sh"
     },
     "husky": {
         "hooks": {
@@ -45,6 +48,8 @@
     "homepage": "https://github.com/decx-press/decx-press#readme",
     "devDependencies": {
         "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+        "@types/express": "^5.0.0",
+        "@types/node": "^22.13.10",
         "cross-env": "^7.0.3",
         "hardhat": "^2.22.17",
         "hardhat-gas-reporter": "^1.0.10",
@@ -57,5 +62,10 @@
     "overrides": {
         "elliptic": ">=6.6.1",
         "ws": ">=7.5.10"
+    },
+    "dependencies": {
+        "body-parser": "^1.20.3",
+        "dotenv": "^16.4.7",
+        "express": "^4.21.2"
     }
 }
