@@ -146,7 +146,7 @@ To use the placeholder Lock module, run:
 ##### Public Environment Lists
 decx.press has been deployed to the following networks:
 - ❌ **`mainnet`** for Ethereum mainnet
-- ✅ **`sepolia`** for Sepolia testnet (you will be able to find it using the address in the .env file `SEP_CONTRACT_ADDY`)
+- ✅ **`sepolia`** for Sepolia testnet (Contract Address: `0x9F2Dd71C9d80d92f3896de1DA92EF3a2d5A6e16B`)
 
 #### 10. Run Unit Tests
 
@@ -293,7 +293,13 @@ With the API running, open another terminal and run the test client to verify th
 npm run test:api
 ```
 
-This will make a POST request to the `/press` endpoint with the content "Jumpy dwarf foxes blitz quickly in a night vex." and print the response.
+To run the tests with gas usage reporting:
+
+```bash
+npm run test:api:gas
+```
+
+This will display the gas costs for each transaction and calculate the total gas used, along with estimated costs in ETH and USD.
 
 ### Integration with CLI
 
