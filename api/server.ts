@@ -117,16 +117,21 @@ app.post("/press", function (req: Request, res: Response) {
             try {
                 // Create a temporary DEKService instance with the specified recipient
                 const tempDekService = new DEKService(decxDAG, eciesService, targetPublicKey);
-                const finalHash = await tempDekService.press(content);
+
+                // Track gas usage
+                const gasTracker = { totalGasUsed: ethers.parseUnits("0", "wei") };
+                const finalHash = await tempDekService.press(content, gasTracker);
 
                 console.log(`Content pressed successfully. Final hash: ${finalHash}`);
                 console.log(`Recipient public key: ${targetPublicKey.substring(0, 10)}...`);
+                console.log(`Gas used: ${gasTracker.totalGasUsed.toString()}`);
 
                 return res.json({
                     success: true,
                     finalHash,
                     contentLength: content.length,
-                    recipientPublicKey: targetPublicKey
+                    recipientPublicKey: targetPublicKey,
+                    gasUsed: gasTracker.totalGasUsed.toString()
                 });
             } catch (error) {
                 if (error instanceof Error && error.message.includes("Recipient public key")) {
@@ -171,14 +176,18 @@ app.post("/release", function (req: Request, res: Response) {
                 });
             }
 
-            const originalContent = await dekService.release(finalHash);
+            // Track gas usage
+            const gasTracker = { totalGasUsed: ethers.parseUnits("0", "wei") };
+            const originalContent = await dekService.release(finalHash, gasTracker);
 
             console.log(`Content released successfully. Length: ${originalContent.length}`);
+            console.log(`Gas used: ${gasTracker.totalGasUsed.toString()}`);
 
             return res.json({
                 success: true,
                 originalContent,
-                contentLength: originalContent.length
+                contentLength: originalContent.length,
+                gasUsed: gasTracker.totalGasUsed.toString()
             });
         } catch (error) {
             console.error("Error in /release route:", error);

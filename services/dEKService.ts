@@ -34,6 +34,13 @@ type EncryptedDataStoredEvent = EventLog & {
 };
 
 /**
+ * GasTracker interface for tracking gas usage
+ */
+interface GasTracker {
+    totalGasUsed: bigint;
+}
+
+/**
  * decx Encryption Key Service (dEKService) is a service that allows you to press and release content using the decx.press protocol.
  */
 export class DEKService {
@@ -62,9 +69,10 @@ export class DEKService {
     /**
      * Press the content and get the final hash
      * @param content - The content to press
+     * @param gasTracker - Optional tracker for gas usage
      * @returns The final hash
      */
-    async press(content: string): Promise<string> {
+    async press(content: string, gasTracker?: GasTracker): Promise<string> {
         // Store original content for later use
         this.originalContent = content;
 
@@ -77,6 +85,11 @@ export class DEKService {
         // -------------------------------------------------------------
         const tx = await this.decxDAG.press(content);
         const receipt = await tx.wait();
+
+        // Track gas usage if a tracker is provided
+        if (gasTracker && receipt.gasUsed) {
+            gasTracker.totalGasUsed += receipt.gasUsed;
+        }
 
         // -------------------------------------------------------------
         // 2. Extract and sort encryption path events
@@ -133,7 +146,12 @@ export class DEKService {
 
             // Emit encrypted content and wait for transaction to be mined
             const tx = await this.decxDAG.storeEncryptedData(hash, encryptedContent);
-            await tx.wait(); // Wait for transaction to be mined
+            const receipt = await tx.wait(); // Wait for transaction to be mined
+
+            // Track gas usage if a tracker is provided
+            if (gasTracker && receipt.gasUsed) {
+                gasTracker.totalGasUsed += receipt.gasUsed;
+            }
         }
 
         // Return final hash
@@ -144,9 +162,10 @@ export class DEKService {
     /**
      * Release the original content from the final hash
      * @param finalHash - The final hash to release the content from
+     * @param gasTracker - Optional tracker for gas usage
      * @returns The original content
      */
-    async release(finalHash: string): Promise<string> {
+    async release(finalHash: string, gasTracker?: GasTracker): Promise<string> {
         // -------------------------------------------------------------
         // 1. Get encryption path from DecxDAG
         // -------------------------------------------------------------
@@ -164,6 +183,9 @@ export class DEKService {
                 }
                 // Get the latest event
                 const event = events[events.length - 1] as EncryptedDataStoredEvent;
+
+                // Note: queryFilter doesn't consume gas, so we don't track it
+
                 return {
                     hash,
                     encryptedContent: Buffer.from(ethers.getBytes(event.args.encryptedPayload))
