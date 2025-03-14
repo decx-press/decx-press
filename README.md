@@ -61,7 +61,7 @@ This will install the required npm packages:
 To interact with the Ethereum blockchain (Sepolia testnet), follow these steps:
 
 #### 1. Set up a MetaMask wallet
-__This step is required to interact with the Ethereum blockchain. If you already have a wallet, you can skip this step.__
+__This step is required to interact with the Ethereum blockchain. If you already have a wallet, you can use its wallet address and private key in the .env file and skip this step.__
 - Install the [MetaMask extension](https://metamask.io/download/) for your browser or mobile app
 - Create a new wallet or import an existing one
 - Make sure to securely store your seed phrase
@@ -143,7 +143,12 @@ To use the placeholder Lock module, run:
 > npm run deploy --module=Lock --network=localhost
 > ```
 
-#### 10. Run Tests
+##### Public Environment Lists
+decx.press has been deployed to the following networks:
+- ❌ **`mainnet`** for Ethereum mainnet
+- ✅ **`sepolia`** for Sepolia testnet (you will be able to find it using the address in the .env file `SEP_CONTRACT_ADDY`)
+
+#### 10. Run Unit Tests
 
 Run your tests using Hardhat's test runner:
 
@@ -201,6 +206,12 @@ The API will be available at http://localhost:3000.
 GET /health
 ```
 
+Example using curl:
+```bash
+$ URL=http://localhost:3000
+$ curl $URL/health
+```
+
 Returns the status of the API and information about the connected contract.
 
 #### Press Content
@@ -213,6 +224,22 @@ Content-Type: application/json
   "content": "Your content to press",
   "recipientPublicKey": "0x04..." (optional)
 }
+```
+
+Example using curl:
+```bash
+$ URL=http://localhost:3000
+$ curl -X POST $URL/press \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Hello world"}'
+```
+
+With a custom recipient:
+```bash
+$ URL=http://localhost:3000
+$ curl -X POST $URL/press \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Hello world", "recipientPublicKey": "0x04a2A5964DdF86CC5088D594Da28F065c818d61656"}'
 ```
 
 If `recipientPublicKey` is provided, the content will be encrypted specifically for that recipient. Only someone with the corresponding private key will be able to decrypt it.
@@ -237,6 +264,14 @@ Content-Type: application/json
   "finalHash": "0x...",
   "recipientPublicKey": "0x04..." (optional)
 }
+```
+
+Example using curl:
+```bash
+$ URL=http://localhost:3000
+$ curl -X POST $URL/release \
+  -H "Content-Type: application/json" \
+  -d '{"finalHash": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"}'
 ```
 
 The `recipientPublicKey` parameter is used for validation. The API server can only decrypt content that was encrypted for its public key.
