@@ -117,8 +117,9 @@ export class DEKService {
             // Encrypt content for this hash
             const encryptedContent = await this.eciesService.encrypt(contentToEncrypt, this.recipientPublicKey);
 
-            // Emit encrypted content
-            await this.decxDAG.storeEncryptedData(hash, encryptedContent);
+            // Emit encrypted content and wait for transaction to be mined
+            const tx = await this.decxDAG.storeEncryptedData(hash, encryptedContent);
+            await tx.wait(); // Wait for transaction to be mined
         }
 
         // Return final hash
