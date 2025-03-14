@@ -46,6 +46,15 @@ export class DEKService {
         private eciesService: ECIESService,
         private recipientPublicKey: string
     ) {
+        // Validate recipient public key
+        if (!recipientPublicKey) {
+            throw new Error("Recipient public key is required");
+        }
+
+        if (!recipientPublicKey.startsWith("0x")) {
+            throw new Error("Recipient public key must start with 0x");
+        }
+
         this.contentMap = new Map();
         this.hashToCharMap = new Map();
     }
@@ -84,13 +93,18 @@ export class DEKService {
         // Find leaf nodes (character hashes) and map them to characters
         // The first N events (where N = content.length) are leaf nodes in order
         const characters = [...content];
+        const leafNodes = pathEvents.filter((event) => event.components[1] === ethers.ZeroHash);
+
+        // Ensure we have enough leaf nodes for all characters
+        if (leafNodes.length < characters.length) {
+            throw new Error(`Not enough leaf nodes (${leafNodes.length}) for content length (${characters.length})`);
+        }
+
+        // Map characters to leaf nodes in order
         for (let i = 0; i < characters.length; i++) {
-            const event = pathEvents[i];
-            if (event && event.components[1] === ethers.ZeroHash) {
-                const char = characters[i];
-                this.hashToCharMap.set(event.hash, char);
-                // console.log(`Mapped hash ${event.hash} to character '${char}'`);
-            }
+            const leafNode = leafNodes[i];
+            const char = characters[i];
+            this.hashToCharMap.set(leafNode.hash, char);
         }
 
         // -------------------------------------------------------------

@@ -94,7 +94,7 @@ app.get("/health", function (req: Request, res: Response) {
 app.post("/press", function (req: Request, res: Response) {
     (async () => {
         try {
-            const { content } = req.body;
+            const { content, recipientPublicKey } = req.body;
 
             if (!content) {
                 return res.status(400).json({ error: "Content is required" });
@@ -102,15 +102,42 @@ app.post("/press", function (req: Request, res: Response) {
 
             console.log(`Pressing content: ${content.substring(0, 20)}${content.length > 20 ? "..." : ""}`);
 
-            const finalHash = await dekService.press(content);
+            // Use provided recipient key or default to the server's configured key
+            const targetPublicKey = recipientPublicKey || process.env.PUBLIC_KEY;
 
-            console.log(`Content pressed successfully. Final hash: ${finalHash}`);
+            // Validate recipient public key format
+            if (!targetPublicKey.startsWith("0x")) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid recipient public key format",
+                    message: "Recipient public key must start with 0x"
+                });
+            }
 
-            return res.json({
-                success: true,
-                finalHash,
-                contentLength: content.length
-            });
+            try {
+                // Create a temporary DEKService instance with the specified recipient
+                const tempDekService = new DEKService(decxDAG, eciesService, targetPublicKey);
+                const finalHash = await tempDekService.press(content);
+
+                console.log(`Content pressed successfully. Final hash: ${finalHash}`);
+                console.log(`Recipient public key: ${targetPublicKey.substring(0, 10)}...`);
+
+                return res.json({
+                    success: true,
+                    finalHash,
+                    contentLength: content.length,
+                    recipientPublicKey: targetPublicKey
+                });
+            } catch (error) {
+                if (error instanceof Error && error.message.includes("Recipient public key")) {
+                    return res.status(400).json({
+                        success: false,
+                        error: "Invalid recipient public key",
+                        message: error.message
+                    });
+                }
+                throw error; // Re-throw other errors to be caught by the outer catch
+            }
         } catch (error) {
             console.error("Error in /press route:", error);
             return res.status(500).json({
@@ -126,13 +153,23 @@ app.post("/press", function (req: Request, res: Response) {
 app.post("/release", function (req: Request, res: Response) {
     (async () => {
         try {
-            const { finalHash } = req.body;
+            const { finalHash, recipientPublicKey } = req.body;
 
             if (!finalHash) {
                 return res.status(400).json({ error: "finalHash is required" });
             }
 
             console.log(`Releasing content from hash: ${finalHash}`);
+
+            // If a recipient key is provided, verify it matches the server's public key
+            // This is a security check to ensure the server can decrypt the content
+            if (recipientPublicKey && recipientPublicKey !== process.env.PUBLIC_KEY) {
+                return res.status(403).json({
+                    success: false,
+                    error: "Cannot decrypt content encrypted for a different recipient",
+                    message: "This content was encrypted for a different public key"
+                });
+            }
 
             const originalContent = await dekService.release(finalHash);
 
