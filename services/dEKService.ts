@@ -34,6 +34,13 @@ type EncryptedDataStoredEvent = EventLog & {
 };
 
 /**
+ * GasTracker interface for tracking gas usage
+ */
+interface GasTracker {
+    totalGasUsed: bigint;
+}
+
+/**
  * decx Encryption Key Service (dEKService) is a service that allows you to press and release content using the decx.press protocol.
  */
 export class DEKService {
@@ -46,6 +53,15 @@ export class DEKService {
         private eciesService: ECIESService,
         private recipientPublicKey: string
     ) {
+        // Validate recipient public key
+        if (!recipientPublicKey) {
+            throw new Error("Recipient public key is required");
+        }
+
+        if (!recipientPublicKey.startsWith("0x")) {
+            throw new Error("Recipient public key must start with 0x");
+        }
+
         this.contentMap = new Map();
         this.hashToCharMap = new Map();
     }
@@ -53,9 +69,10 @@ export class DEKService {
     /**
      * Press the content and get the final hash
      * @param content - The content to press
+     * @param gasTracker - Optional tracker for gas usage
      * @returns The final hash
      */
-    async press(content: string): Promise<string> {
+    async press(content: string, gasTracker?: GasTracker): Promise<string> {
         // Store original content for later use
         this.originalContent = content;
 
@@ -68,6 +85,11 @@ export class DEKService {
         // -------------------------------------------------------------
         const tx = await this.decxDAG.press(content);
         const receipt = await tx.wait();
+
+        // Track gas usage if a tracker is provided
+        if (gasTracker && receipt.gasUsed) {
+            gasTracker.totalGasUsed += receipt.gasUsed;
+        }
 
         // -------------------------------------------------------------
         // 2. Extract and sort encryption path events
@@ -84,13 +106,18 @@ export class DEKService {
         // Find leaf nodes (character hashes) and map them to characters
         // The first N events (where N = content.length) are leaf nodes in order
         const characters = [...content];
+        const leafNodes = pathEvents.filter((event) => event.components[1] === ethers.ZeroHash);
+
+        // Ensure we have enough leaf nodes for all characters
+        if (leafNodes.length < characters.length) {
+            throw new Error(`Not enough leaf nodes (${leafNodes.length}) for content length (${characters.length})`);
+        }
+
+        // Map characters to leaf nodes in order
         for (let i = 0; i < characters.length; i++) {
-            const event = pathEvents[i];
-            if (event && event.components[1] === ethers.ZeroHash) {
-                const char = characters[i];
-                this.hashToCharMap.set(event.hash, char);
-                // console.log(`Mapped hash ${event.hash} to character '${char}'`);
-            }
+            const leafNode = leafNodes[i];
+            const char = characters[i];
+            this.hashToCharMap.set(leafNode.hash, char);
         }
 
         // -------------------------------------------------------------
@@ -117,8 +144,14 @@ export class DEKService {
             // Encrypt content for this hash
             const encryptedContent = await this.eciesService.encrypt(contentToEncrypt, this.recipientPublicKey);
 
-            // Emit encrypted content
-            await this.decxDAG.storeEncryptedData(hash, encryptedContent);
+            // Emit encrypted content and wait for transaction to be mined
+            const tx = await this.decxDAG.storeEncryptedData(hash, encryptedContent);
+            const receipt = await tx.wait(); // Wait for transaction to be mined
+
+            // Track gas usage if a tracker is provided
+            if (gasTracker && receipt.gasUsed) {
+                gasTracker.totalGasUsed += receipt.gasUsed;
+            }
         }
 
         // Return final hash
@@ -129,9 +162,10 @@ export class DEKService {
     /**
      * Release the original content from the final hash
      * @param finalHash - The final hash to release the content from
+     * @param gasTracker - Optional tracker for gas usage
      * @returns The original content
      */
-    async release(finalHash: string): Promise<string> {
+    async release(finalHash: string, gasTracker?: GasTracker): Promise<string> {
         // -------------------------------------------------------------
         // 1. Get encryption path from DecxDAG
         // -------------------------------------------------------------
@@ -149,6 +183,9 @@ export class DEKService {
                 }
                 // Get the latest event
                 const event = events[events.length - 1] as EncryptedDataStoredEvent;
+
+                // Note: queryFilter doesn't consume gas, so we don't track it
+
                 return {
                     hash,
                     encryptedContent: Buffer.from(ethers.getBytes(event.args.encryptedPayload))

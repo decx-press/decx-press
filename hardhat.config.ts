@@ -2,6 +2,10 @@ import { HardhatUserConfig } from "hardhat/config";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "@nomicfoundation/hardhat-toolbox";
+import * as dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -11,6 +15,12 @@ const config: HardhatUserConfig = {
         enabled: true, // Optimize the code for gas efficiency
         runs: 200,
       },
+    },
+  },
+  networks: {
+    sepolia: {
+      url: process.env.RPC_URL || "",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     },
   },
   gasReporter: {
