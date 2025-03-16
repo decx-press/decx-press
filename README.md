@@ -290,16 +290,81 @@ Returns:
 With the API running, open another terminal and run the test client to verify the API works:
 
 ```bash
-npm run test:api
+npm run api:test
 ```
 
 To run the tests with gas usage reporting:
 
 ```bash
-npm run test:api:gas
+npm run api:test:gas
 ```
 
 This will display the gas costs for each transaction and calculate the total gas used, along with estimated costs in ETH and USD.
+
+### Local Storage for Encrypted Content
+
+The API supports storing encrypted content locally instead of on the blockchain, which significantly reduces gas costs and improves performance. This is especially useful for large content or when you want to minimize blockchain interactions.
+
+#### How Local Storage Works
+
+1. When you press content without the `storeOnChain` parameter set to `true`, the API will:
+   - Generate the encryption path and hashes on the blockchain
+   - Encrypt the content locally
+   - Return the encrypted content in the response
+   - Not store the encrypted content on the blockchain
+
+2. When releasing content, you can provide the encrypted content in the request:
+   ```json
+   {
+     "finalHash": "0x...",
+     "encryptedContents": {
+       "0xhash1": "base64encodedcontent1",
+       "0xhash2": "base64encodedcontent2"
+     }
+   }
+   ```
+
+3. The API will use the provided encrypted content instead of fetching it from the blockchain.
+
+#### Testing Local Storage
+
+To test the local storage functionality:
+
+```bash
+npm run api:test:local-storage
+```
+
+This will:
+- Press content without storing it on-chain
+- Save the encrypted content to a local file
+- Release the content using the locally stored encrypted content
+- Compare gas usage between local storage and on-chain storage
+
+#### Benefits of Local Storage
+
+- **Gas Efficiency**: Significantly reduces gas costs (typically 10-100x less gas)
+- **Speed**: Faster operations since fewer blockchain transactions are needed
+- **Privacy**: Sensitive content is not stored on the public blockchain
+- **Flexibility**: You can still use on-chain storage when needed
+
+### Performance Testing
+
+To evaluate the performance of the API with different content sizes:
+
+```bash
+npm run api:test:performance
+```
+
+This test:
+- Measures press and release times for different content sizes
+- Tracks gas usage for each operation
+- Verifies content integrity
+- Provides a summary table of results
+
+Use this test to:
+- Identify performance bottlenecks
+- Determine optimal content sizes for your use case
+- Compare local storage vs. on-chain storage performance
 
 ### Integration with CLI
 

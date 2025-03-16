@@ -126,3 +126,5 @@ ignition/deployments/chain-31337
 
 # Issue Notes Folder
 /Issue_Notes
+
+api/local-storage

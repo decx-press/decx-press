@@ -94,7 +94,7 @@ app.get("/health", function (req: Request, res: Response) {
 app.post("/press", function (req: Request, res: Response) {
     (async () => {
         try {
-            const { content, recipientPublicKey } = req.body;
+            const { content, recipientPublicKey, storeOnChain } = req.body;
 
             if (!content) {
                 return res.status(400).json({ error: "Content is required" });
@@ -114,16 +114,32 @@ app.post("/press", function (req: Request, res: Response) {
                 });
             }
 
+            // Determine whether to store on chain (default to false for gas efficiency)
+            const shouldStoreOnChain = storeOnChain !== undefined ? storeOnChain : false;
+
             try {
                 // Create a temporary DEKService instance with the specified recipient
                 const tempDekService = new DEKService(decxDAG, eciesService, targetPublicKey);
 
                 // Track gas usage
                 const gasTracker = { totalGasUsed: ethers.parseUnits("0", "wei") };
-                const finalHash = await tempDekService.press(content, gasTracker);
+
+                // Press content with optional on-chain storage
+                const result = await tempDekService.press(content, gasTracker, shouldStoreOnChain);
+                const finalHash = result.finalHash;
+
+                // Convert encrypted contents map to a serializable object if not storing on chain
+                let encryptedContents: Record<string, string> | null = null;
+                if (!shouldStoreOnChain) {
+                    encryptedContents = {};
+                    for (const [hash, content] of result.encryptedContents.entries()) {
+                        encryptedContents[hash] = content.toString("base64");
+                    }
+                }
 
                 console.log(`Content pressed successfully. Final hash: ${finalHash}`);
                 console.log(`Recipient public key: ${targetPublicKey.substring(0, 10)}...`);
+                console.log(`Stored on chain: ${shouldStoreOnChain}`);
                 console.log(`Gas used: ${gasTracker.totalGasUsed.toString()}`);
 
                 return res.json({
@@ -131,6 +147,8 @@ app.post("/press", function (req: Request, res: Response) {
                     finalHash,
                     contentLength: content.length,
                     recipientPublicKey: targetPublicKey,
+                    storedOnChain: shouldStoreOnChain,
+                    encryptedContents: encryptedContents,
                     gasUsed: gasTracker.totalGasUsed.toString()
                 });
             } catch (error) {
@@ -158,7 +176,7 @@ app.post("/press", function (req: Request, res: Response) {
 app.post("/release", function (req: Request, res: Response) {
     (async () => {
         try {
-            const { finalHash, recipientPublicKey } = req.body;
+            const { finalHash, recipientPublicKey, encryptedContents } = req.body;
 
             if (!finalHash) {
                 return res.status(400).json({ error: "finalHash is required" });
@@ -176,9 +194,21 @@ app.post("/release", function (req: Request, res: Response) {
                 });
             }
 
+            // Convert encryptedContents from base64 strings to Buffer objects if provided
+            let localEncryptedContents: Map<string, Buffer> | undefined;
+            if (encryptedContents) {
+                localEncryptedContents = new Map();
+                for (const [hash, content] of Object.entries(encryptedContents)) {
+                    localEncryptedContents.set(hash, Buffer.from(content as string, "base64"));
+                }
+                console.log(`Using ${localEncryptedContents.size} locally provided encrypted contents`);
+            }
+
             // Track gas usage
             const gasTracker = { totalGasUsed: ethers.parseUnits("0", "wei") };
-            const originalContent = await dekService.release(finalHash, gasTracker);
+
+            // Release content with optional local encrypted contents
+            const originalContent = await dekService.release(finalHash, gasTracker, localEncryptedContents);
 
             console.log(`Content released successfully. Length: ${originalContent.length}`);
             console.log(`Gas used: ${gasTracker.totalGasUsed.toString()}`);
