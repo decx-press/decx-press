@@ -19,9 +19,11 @@
         "format": "prettier . --write --plugin=prettier-plugin-solidity",
         "lint-staged": "lint-staged",
         "prepare": "husky",
-        "start:api": "ts-node api/server.ts",
-        "test:api": "node api/test-client.js",
-        "test:api:gas": "node api/test-client.js --report-gas",
+        "api:start": "ts-node api/server.ts",
+        "api:test": "node api/test-client.js",
+        "api:test:gas": "node api/test-client.js --report-gas",
+        "api:test:local-storage": "node api/test-local-storage.js",
+        "api:test:performance": "node api/test-performance.js",
         "balance": "chmod +x scripts/balance.sh && ./scripts/balance.sh"
     },
     "husky": {

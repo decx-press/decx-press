@@ -41,12 +41,21 @@ interface GasTracker {
 }
 
 /**
+ * PressResult interface for returning results from the press method
+ */
+interface PressResult {
+    finalHash: string;
+    encryptedContents: Map<string, Buffer>;
+}
+
+/**
  * decx Encryption Key Service (dEKService) is a service that allows you to press and release content using the decx.press protocol.
  */
 export class DEKService {
     private contentMap: Map<string, number>;
     private hashToCharMap: Map<string, string>; // Map from hash to character
     private originalContent: string = ""; // Initialize with empty string
+    private localEncryptedContent: Map<string, Buffer> = new Map(); // Local storage for encrypted content
 
     constructor(
         private decxDAG: Contract,
@@ -70,15 +79,17 @@ export class DEKService {
      * Press the content and get the final hash
      * @param content - The content to press
      * @param gasTracker - Optional tracker for gas usage
-     * @returns The final hash
+     * @param storeOnChain - Whether to store encrypted content on-chain (default: false)
+     * @returns The final hash and map of encrypted contents
      */
-    async press(content: string, gasTracker?: GasTracker): Promise<string> {
+    async press(content: string, gasTracker?: GasTracker, storeOnChain: boolean = false): Promise<PressResult> {
         // Store original content for later use
         this.originalContent = content;
 
         // Clear previous maps
         this.contentMap.clear();
         this.hashToCharMap.clear();
+        this.localEncryptedContent.clear();
 
         // -------------------------------------------------------------
         // 1. Call DecxDAG to process content and get hash
@@ -121,7 +132,7 @@ export class DEKService {
         }
 
         // -------------------------------------------------------------
-        // 3. For each hash in the path, encrypt and emit
+        // 3. For each hash in the path, encrypt and optionally emit
         // -------------------------------------------------------------
         for (const event of pathEvents) {
             const { hash, components } = event;
@@ -144,28 +155,42 @@ export class DEKService {
             // Encrypt content for this hash
             const encryptedContent = await this.eciesService.encrypt(contentToEncrypt, this.recipientPublicKey);
 
-            // Emit encrypted content and wait for transaction to be mined
-            const tx = await this.decxDAG.storeEncryptedData(hash, encryptedContent);
-            const receipt = await tx.wait(); // Wait for transaction to be mined
+            // Store encrypted content locally
+            this.localEncryptedContent.set(hash, encryptedContent);
 
-            // Track gas usage if a tracker is provided
-            if (gasTracker && receipt.gasUsed) {
-                gasTracker.totalGasUsed += receipt.gasUsed;
+            // Optionally store on-chain
+            if (storeOnChain) {
+                // Emit encrypted content and wait for transaction to be mined
+                const tx = await this.decxDAG.storeEncryptedData(hash, encryptedContent);
+                const receipt = await tx.wait(); // Wait for transaction to be mined
+
+                // Track gas usage if a tracker is provided
+                if (gasTracker && receipt.gasUsed) {
+                    gasTracker.totalGasUsed += receipt.gasUsed;
+                }
             }
         }
 
-        // Return final hash
+        // Return final hash and encrypted contents
         const finalHash = pathEvents[pathEvents.length - 1].hash;
-        return finalHash;
+        return {
+            finalHash,
+            encryptedContents: new Map(this.localEncryptedContent)
+        };
     }
 
     /**
      * Release the original content from the final hash
      * @param finalHash - The final hash to release the content from
      * @param gasTracker - Optional tracker for gas usage
+     * @param localEncryptedContents - Optional map of locally stored encrypted contents
      * @returns The original content
      */
-    async release(finalHash: string, gasTracker?: GasTracker): Promise<string> {
+    async release(
+        finalHash: string,
+        gasTracker?: GasTracker,
+        localEncryptedContents?: Map<string, Buffer>
+    ): Promise<string> {
         // -------------------------------------------------------------
         // 1. Get encryption path from DecxDAG
         // -------------------------------------------------------------
@@ -176,6 +201,15 @@ export class DEKService {
         // -------------------------------------------------------------
         const encryptedContents = await Promise.all(
             path.map(async (hash) => {
+                // First check if we have the content locally
+                if (localEncryptedContents && localEncryptedContents.has(hash)) {
+                    return {
+                        hash,
+                        encryptedContent: localEncryptedContents.get(hash)!
+                    };
+                }
+
+                // Otherwise, get it from the blockchain
                 const filter = this.decxDAG.filters.EncryptedDataStored(hash);
                 const events = await this.decxDAG.queryFilter(filter);
                 if (events.length === 0) {
