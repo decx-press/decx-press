@@ -83,100 +83,151 @@ export class DEKService {
      * @returns The final hash and map of encrypted contents
      */
     async press(content: string, gasTracker?: GasTracker, storeOnChain: boolean = false): Promise<PressResult> {
-        // Store original content for later use
-        this.originalContent = content;
+        try {
+            // Store original content for later use
+            this.originalContent = content;
 
-        // Clear previous maps
-        this.contentMap.clear();
-        this.hashToCharMap.clear();
-        this.localEncryptedContent.clear();
+            // Clear previous maps
+            this.contentMap.clear();
+            this.hashToCharMap.clear();
+            this.localEncryptedContent.clear();
 
-        // -------------------------------------------------------------
-        // 1. Call DecxDAG to process content and get hash
-        // -------------------------------------------------------------
-        const tx = await this.decxDAG.press(content);
-        const receipt = await tx.wait();
+            // Get ethers provider
+            const provider = this.decxDAG.runner?.provider;
+            if (!provider) {
+                throw new Error("Provider not available");
+            }
 
-        // Track gas usage if a tracker is provided
-        if (gasTracker && receipt.gasUsed) {
-            gasTracker.totalGasUsed += receipt.gasUsed;
-        }
+            // Get current gas prices from the network
+            const feeData = await provider.getFeeData();
+            console.log(`[dEKS] Current network gas prices:`, {
+                gasPrice: ethers.formatUnits(feeData.gasPrice || 0, "gwei"),
+                maxFeePerGas: ethers.formatUnits(feeData.maxFeePerGas || 0, "gwei"),
+                maxPriorityFeePerGas: ethers.formatUnits(feeData.maxPriorityFeePerGas || 0, "gwei")
+            });
 
-        // -------------------------------------------------------------
-        // 2. Extract and sort encryption path events
-        // -------------------------------------------------------------
-        const pathEvents: EncryptionPathEvent[] = receipt.logs
-            .filter((log: any) => log.fragment?.name === "EncryptionPathCreated")
-            .map((log: any) => ({
-                hash: log.args.hash,
-                components: log.args.components,
-                index: Number(log.args.index) // Convert BigInt to number
-            }))
-            .sort((a: EncryptionPathEvent, b: EncryptionPathEvent) => a.index - b.index);
+            // Determine appropriate gas price multiplier based on network conditions
+            let maxFeeMultiplier = 10; // Default high multiplier for testnets
+            let priorityFeeMultiplier = 10; // Default high multiplier for testnets
 
-        // Find leaf nodes (character hashes) and map them to characters
-        // The first N events (where N = content.length) are leaf nodes in order
-        const characters = [...content];
-        const leafNodes = pathEvents.filter((event) => event.components[1] === ethers.ZeroHash);
+            // Check if we're on mainnet to adjust gas pricing strategy
+            const network = await provider.getNetwork();
+            if (network.chainId === 1n) {
+                // Ethereum mainnet
+                // Get current base fee to estimate congestion
+                const block = await provider.getBlock("latest");
+                if (block && block.baseFeePerGas) {
+                    const baseFeeGwei = Number(ethers.formatUnits(block.baseFeePerGas, "gwei"));
 
-        // Ensure we have enough leaf nodes for all characters
-        if (leafNodes.length < characters.length) {
-            throw new Error(`Not enough leaf nodes (${leafNodes.length}) for content length (${characters.length})`);
-        }
+                    // Adjust multiplier based on congestion level
+                    if (baseFeeGwei < 20) {
+                        // Low congestion
+                        maxFeeMultiplier = 1.5;
+                        priorityFeeMultiplier = 1.2;
+                    } else if (baseFeeGwei < 50) {
+                        // Medium congestion
+                        maxFeeMultiplier = 2;
+                        priorityFeeMultiplier = 1.5;
+                    } else if (baseFeeGwei < 100) {
+                        // High congestion
+                        maxFeeMultiplier = 3;
+                        priorityFeeMultiplier = 2;
+                    } else {
+                        // Very high congestion
+                        maxFeeMultiplier = 5;
+                        priorityFeeMultiplier = 3;
+                    }
 
-        // Map characters to leaf nodes in order
-        for (let i = 0; i < characters.length; i++) {
-            const leafNode = leafNodes[i];
-            const char = characters[i];
-            this.hashToCharMap.set(leafNode.hash, char);
-        }
-
-        // -------------------------------------------------------------
-        // 3. For each hash in the path, encrypt and optionally emit
-        // -------------------------------------------------------------
-        for (const event of pathEvents) {
-            const { hash, components } = event;
-
-            let contentToEncrypt: string;
-            const isLeafNode = components[1] === ethers.ZeroHash;
-
-            if (isLeafNode) {
-                // Leaf node - get character from our hash-to-char map
-                const char = this.hashToCharMap.get(hash);
-                if (!char) {
-                    throw new Error(`Cannot find character for hash ${hash}`);
+                    console.log(
+                        `[dEKS] Mainnet detected. Base fee: ${baseFeeGwei} gwei. Using multipliers: maxFee=${maxFeeMultiplier}x, priorityFee=${priorityFeeMultiplier}x`
+                    );
                 }
-                contentToEncrypt = char;
             } else {
-                // Inner node - encrypt the component hashes as a pair
-                contentToEncrypt = JSON.stringify(components);
+                console.log(
+                    `[dEKS] Testnet detected (chainId: ${network.chainId}). Using high multipliers for faster confirmation.`
+                );
             }
 
-            // Encrypt content for this hash
-            const encryptedContent = await this.eciesService.encrypt(contentToEncrypt, this.recipientPublicKey);
+            // Calculate gas prices with appropriate multipliers
+            const maxFeePerGas = feeData.maxFeePerGas
+                ? (feeData.maxFeePerGas * BigInt(Math.floor(maxFeeMultiplier * 100))) / BigInt(100) // Apply multiplier
+                : ethers.parseUnits("30", "gwei"); // Fallback to 30 gwei
 
-            // Store encrypted content locally
-            this.localEncryptedContent.set(hash, encryptedContent);
+            const maxPriorityFeePerGas = feeData.maxPriorityFeePerGas
+                ? (feeData.maxPriorityFeePerGas * BigInt(Math.floor(priorityFeeMultiplier * 100))) / BigInt(100) // Apply multiplier
+                : ethers.parseUnits("2", "gwei"); // Fallback to 2 gwei
 
-            // Optionally store on-chain
+            console.log(`[dEKS] Using gas prices:`, {
+                maxFeePerGas: ethers.formatUnits(maxFeePerGas, "gwei"),
+                maxPriorityFeePerGas: ethers.formatUnits(maxPriorityFeePerGas, "gwei")
+            });
+
+            // Calculate dynamic gas limit based on content size and storage option
+            let gasLimit = 500000; // Base gas limit
             if (storeOnChain) {
-                // Emit encrypted content and wait for transaction to be mined
-                const tx = await this.decxDAG.storeEncryptedData(hash, encryptedContent);
-                const receipt = await tx.wait(); // Wait for transaction to be mined
-
-                // Track gas usage if a tracker is provided
-                if (gasTracker && receipt.gasUsed) {
-                    gasTracker.totalGasUsed += receipt.gasUsed;
-                }
+                // For on-chain storage, we need more gas depending on content size
+                // Each character takes approximately 20K-25K gas
+                gasLimit = Math.min(10000000, 150000 + content.length * 25000);
+                console.log(`[dEKS] Content will be stored on-chain. Using higher gas limit: ${gasLimit}`);
             }
+
+            // Call DecxDAG to process content
+            const tx = await this.decxDAG.press(content, {
+                gasLimit,
+                maxFeePerGas,
+                maxPriorityFeePerGas
+            });
+
+            // Log transaction details
+            console.log(`[dEKS] Transaction submitted:`, {
+                hash: tx.hash,
+                from: tx.from,
+                to: tx.to,
+                gasLimit: tx.gasLimit?.toString(),
+                maxFeePerGas: ethers.formatUnits(tx.maxFeePerGas || 0, "gwei"),
+                maxPriorityFeePerGas: ethers.formatUnits(tx.maxPriorityFeePerGas || 0, "gwei"),
+                storedOnChain: storeOnChain
+            });
+
+            // Return immediately with the transaction hash
+            return {
+                finalHash: tx.hash,
+                encryptedContents: new Map()
+            };
+        } catch (error) {
+            console.error(`[dEKS] Error in press method:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Check the status of a transaction
+     * @param txHash - The transaction hash to check
+     * @returns The transaction status
+     */
+    async checkTransactionStatus(
+        txHash: string
+    ): Promise<{ status: "pending" | "success" | "failed"; blockNumber?: number; gasUsed?: string }> {
+        const provider = this.decxDAG.runner?.provider;
+        if (!provider) {
+            throw new Error("Provider not available");
         }
 
-        // Return final hash and encrypted contents
-        const finalHash = pathEvents[pathEvents.length - 1].hash;
-        return {
-            finalHash,
-            encryptedContents: new Map(this.localEncryptedContent)
-        };
+        try {
+            const receipt = await provider.getTransactionReceipt(txHash);
+            if (!receipt) {
+                return { status: "pending" };
+            }
+
+            return {
+                status: receipt.status === 1 ? "success" : "failed",
+                blockNumber: receipt.blockNumber,
+                gasUsed: receipt.gasUsed.toString()
+            };
+        } catch (error) {
+            console.error(`[dEKS] Error checking transaction status:`, error);
+            throw error;
+        }
     }
 
     /**
