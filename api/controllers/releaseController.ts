@@ -11,13 +11,13 @@ import { v4 as uuidv4 } from "uuid";
 
 export const releaseContent = async (req: Request, res: Response) => {
     const requestId = uuidv4();
-    console.log(`[RLSE] [${new Date().toISOString()}] [${requestId}] Received release request`);
+    console.log(`[REL] [${new Date().toISOString()}] [${requestId}] Received release request`);
 
     try {
         const { finalHash, privateKey, recipientPublicKey, localEncryptedContents } = req.body;
 
         if (!finalHash) {
-            console.error(`[RLSE] [${new Date().toISOString()}] [${requestId}] Missing finalHash in request`);
+            console.error(`[REL] [${new Date().toISOString()}] [${requestId}] Missing finalHash in request`);
             return res.status(400).json({
                 success: false,
                 error: "Missing finalHash in request"
@@ -31,13 +31,13 @@ export const releaseContent = async (req: Request, res: Response) => {
 
         if (privateKey) {
             console.log(
-                `[RLSE] [${new Date().toISOString()}] [${requestId}] Using provided private key for transaction`
+                `[REL] [${new Date().toISOString()}] [${requestId}] Using provided private key for transaction`
             );
             signer = createWalletFromPrivateKey(privateKey);
             contract = createContractWithSigner(signer);
             signerAddress = signer.address;
             console.log(
-                `[RLSE] [${new Date().toISOString()}] [${requestId}] Transaction signer address: ${signerAddress}`
+                `[REL] [${new Date().toISOString()}] [${requestId}] Transaction signer address: ${signerAddress}`
             );
         }
 
@@ -46,14 +46,14 @@ export const releaseContent = async (req: Request, res: Response) => {
 
         // Release the content
         console.log(
-            `[RLSE] [${new Date().toISOString()}] [${requestId}] Releasing content with finalHash: ${finalHash}`
+            `[REL] [${new Date().toISOString()}] [${requestId}] Releasing content with finalHash: ${finalHash}`
         );
         const decryptedContent = await dekService.release(finalHash, undefined, localEncryptedContents);
 
         // Store transaction hash
         storeTransaction(requestId, { hash: finalHash });
 
-        console.log(`[RLSE] [${new Date().toISOString()}] [${requestId}] Content released successfully`);
+        console.log(`[REL] [${new Date().toISOString()}] [${requestId}] Content released successfully`);
         return res.json({
             success: true,
             requestId,
@@ -62,7 +62,7 @@ export const releaseContent = async (req: Request, res: Response) => {
             signerAddress
         });
     } catch (error) {
-        console.error(`[RLSE] [${new Date().toISOString()}] [${requestId}] Error releasing content:`, error);
+        console.error(`[REL] [${new Date().toISOString()}] [${requestId}] Error releasing content:`, error);
         return res.status(500).json({
             success: false,
             error: "Failed to release content",

@@ -7,7 +7,7 @@ export const getBalance = async (req: Request, res: Response) => {
         // Get wallet address from query parameter or use server's wallet
         const walletAddress = (req.query.address as string) || getSigner().address;
 
-        console.log(`[BLNC] [${new Date().toISOString()}] Checking wallet balance for address: ${walletAddress}`);
+        console.log(`[BLN] [${new Date().toISOString()}] Checking wallet balance for address: ${walletAddress}`);
 
         // Get current network info
         const provider = getProvider();
@@ -16,7 +16,7 @@ export const getBalance = async (req: Request, res: Response) => {
         const balance = await provider.getBalance(walletAddress);
         const balanceInEth = ethers.formatEther(balance);
         console.log(
-            `[BLNC] [${new Date().toISOString()}] Wallet balance: ${balanceInEth} ETH on ${network.name} (Chain ID: ${network.chainId})`
+            `[BLN] [${new Date().toISOString()}] Wallet balance: ${balanceInEth} ETH on ${network.name} (Chain ID: ${network.chainId})`
         );
 
         // Get network gas prices for reference
@@ -51,7 +51,7 @@ export const getBalance = async (req: Request, res: Response) => {
             recommendedMinBalanceEth: ethers.formatEther(recommendedBalance)
         });
     } catch (error) {
-        console.error(`[BLNC] [${new Date().toISOString()}] Error checking wallet balance:`, error);
+        console.error(`[BLN] [${new Date().toISOString()}] Error checking wallet balance:`, error);
         return res.status(500).json({
             success: false,
             error: "Failed to check wallet balance",
