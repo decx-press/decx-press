@@ -6,7 +6,7 @@ export const getHash = async (req: Request, res: Response) => {
         const { content } = req.body;
 
         if (!content) {
-            console.error(`[HASH] [${new Date().toISOString()}] Missing content in request`);
+            console.error(`[HSH] [${new Date().toISOString()}] Missing content in request`);
             return res.status(400).json({
                 success: false,
                 error: "Missing content in request"
@@ -17,16 +17,16 @@ export const getHash = async (req: Request, res: Response) => {
         const contract = getContract();
 
         // Get hash for content
-        console.log(`[HASH] [${new Date().toISOString()}] Getting hash for content with length: ${content.length}`);
+        console.log(`[HSH] [${new Date().toISOString()}] Getting hash for content with length: ${content.length}`);
         const hash = await contract.getHashForCharacter(content);
 
-        console.log(`[HASH] [${new Date().toISOString()}] Hash generated successfully`);
+        console.log(`[HSH] [${new Date().toISOString()}] Hash generated successfully`);
         return res.json({
             success: true,
             hash
         });
     } catch (error) {
-        console.error(`[HASH] [${new Date().toISOString()}] Error generating hash:`, error);
+        console.error(`[HSH] [${new Date().toISOString()}] Error generating hash:`, error);
         return res.status(500).json({
             success: false,
             error: "Failed to generate hash",

@@ -78,15 +78,15 @@ const provider = new ethers.JsonRpcProvider(RPC_URL);
 
 // Configure provider event handlers
 provider.on("debug", (info) => {
-    console.log(`[PROV] [${new Date().toISOString()}] Debug:`, info);
+    console.log(`[PRV] [${new Date().toISOString()}] Debug:`, info);
 });
 
 provider.on("error", (error) => {
-    console.error(`[PROV] [${new Date().toISOString()}] Error:`, error);
+    console.error(`[PRV] [${new Date().toISOString()}] Error:`, error);
 });
 
 provider.on("network", (newNetwork, oldNetwork) => {
-    console.log(`[PROV] [${new Date().toISOString()}] Network changed:`, {
+    console.log(`[PRV] [${new Date().toISOString()}] Network changed:`, {
         from: oldNetwork?.name,
         to: newNetwork.name
     });
@@ -100,31 +100,31 @@ provider.on("network", (newNetwork, oldNetwork) => {
 let signer;
 if (process.env.PRIVATE_KEY) {
     signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-    console.log(`[WLLT] [${new Date().toISOString()}] Using wallet address: ${signer.address}`);
-    console.log(`[WLLT] [${new Date().toISOString()}] Connected to network: ${RPC_URL}`);
-    console.log(`[WLLT] [${new Date().toISOString()}] Contract address: ${SEP_CONTRACT_ADDY}`);
+    console.log(`[WLT] [${new Date().toISOString()}] Using wallet address: ${signer.address}`);
+    console.log(`[WLT] [${new Date().toISOString()}] Connected to network: ${RPC_URL}`);
+    console.log(`[WLT] [${new Date().toISOString()}] Contract address: ${SEP_CONTRACT_ADDY}`);
 } else {
-    console.error("[WLLT] PRIVATE_KEY environment variable is required");
+    console.error("[WLT] PRIVATE_KEY environment variable is required");
     process.exit(1);
 }
 
 // Initialize contract instance
-console.log(`[CONT] [${new Date().toISOString()}] Creating contract instance with address: ${SEP_CONTRACT_ADDY}`);
+console.log(`[CNT] [${new Date().toISOString()}] Creating contract instance with address: ${SEP_CONTRACT_ADDY}`);
 const decxDAG = new ethers.Contract(SEP_CONTRACT_ADDY, contractAbi, signer);
 
 // Initialize ECIES service
-console.log(`[ECIE] [${new Date().toISOString()}] Creating ECIESService`);
+console.log(`[ECI] [${new Date().toISOString()}] Creating ECIESService`);
 const eciesService = new ECIESService(process.env.PRIVATE_KEY);
 
 // Validate recipient public key
 const recipientPublicKey = process.env.PUBLIC_KEY;
 if (!recipientPublicKey) {
-    console.error("[CONF] PUBLIC_KEY environment variable is required");
+    console.error("[CFG] PUBLIC_KEY environment variable is required");
     process.exit(1);
 }
 
 // Initialize DEKService
-console.log(`[DEKS] [${new Date().toISOString()}] Creating dEKService instance`);
+console.log(`[DEK] [${new Date().toISOString()}] Creating dEKService instance`);
 const dekService = new DEKService(decxDAG, eciesService, recipientPublicKey);
 
 // ===================================
@@ -136,15 +136,15 @@ const transactionStore = new Map<string, { hash?: string; error?: string }>();
 
 // Add logging for transaction store operations
 const logTransactionStore = (operation: string, requestId: string, data?: any) => {
-    console.log(`[STORE] [${new Date().toISOString()}] ${operation} for request ${requestId}:`, data);
-    console.log(`[STORE] [${new Date().toISOString()}] Current store size: ${transactionStore.size}`);
-    console.log(`[STORE] [${new Date().toISOString()}] Store keys:`, Array.from(transactionStore.keys()));
-    console.log(`[STORE] [${new Date().toISOString()}] Store contents:`, Array.from(transactionStore.entries()));
+    console.log(`[STR] [${new Date().toISOString()}] ${operation} for request ${requestId}:`, data);
+    console.log(`[STR] [${new Date().toISOString()}] Current store size: ${transactionStore.size}`);
+    console.log(`[STR] [${new Date().toISOString()}] Store keys:`, Array.from(transactionStore.keys()));
+    console.log(`[STR] [${new Date().toISOString()}] Store contents:`, Array.from(transactionStore.entries()));
 };
 
 // Store transaction data
 const storeTransaction = (requestId: string, data: { hash?: string; error?: string }) => {
-    console.log(`[STORE] [${new Date().toISOString()}] Storing transaction data for ${requestId}:`, data);
+    console.log(`[STOR] [${new Date().toISOString()}] Storing transaction data for ${requestId}:`, data);
     transactionStore.set(requestId, data);
     logTransactionStore("Store operation", requestId, data);
 };
@@ -154,12 +154,12 @@ const storeTransaction = (requestId: string, data: { hash?: string; error?: stri
 // ===================================
 
 // Mount routes
-app.use("/api/health", healthRouter);
-app.use("/api/balance", balanceRouter);
-app.use("/api/press", pressRouter);
-app.use("/api/hash", hashRouter);
-app.use("/api/status", statusRouter);
-app.use("/api/release", releaseRouter);
+app.use("/v1/health", healthRouter);
+app.use("/v1/balance", balanceRouter);
+app.use("/v1/press", pressRouter);
+app.use("/v1/hash", hashRouter);
+app.use("/v1/status", statusRouter);
+app.use("/v1/release", releaseRouter);
 
 // Error handling middleware - must be last
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
