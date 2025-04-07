@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import bodyParser from "body-parser";
 import { ethers } from "ethers";
 import { DEKService } from "../services/dEKService";
@@ -7,6 +7,18 @@ import dotenv from "dotenv";
 import cors from "cors";
 import fs from "fs";
 import path from "path";
+
+// Import routes
+import balanceRouter from "./routes/balance";
+import pressRouter from "./routes/press";
+import hashRouter from "./routes/hash";
+import statusRouter from "./routes/status";
+import releaseRouter from "./routes/release";
+import healthRouter from "./routes/health";
+
+// Import middleware
+import { requestLogger } from "./middleware/requestLogger";
+import { errorHandler } from "./middleware/errorHandler";
 
 // Load environment variables from root directory
 dotenv.config({ path: path.join(__dirname, "../.env") });
@@ -19,6 +31,7 @@ const app = express();
 // ===================================
 app.use(bodyParser.json());
 app.use(cors());
+app.use(requestLogger);
 
 // ===================================
 // ENVIRONMENT & CONFIG VALIDATION
@@ -65,15 +78,15 @@ const provider = new ethers.JsonRpcProvider(RPC_URL);
 
 // Configure provider event handlers
 provider.on("debug", (info) => {
-    console.log(`[PROVIDER] [${new Date().toISOString()}] Debug:`, info);
+    console.log(`[PROV] [${new Date().toISOString()}] Debug:`, info);
 });
 
 provider.on("error", (error) => {
-    console.error(`[PROVIDER] [${new Date().toISOString()}] Error:`, error);
+    console.error(`[PROV] [${new Date().toISOString()}] Error:`, error);
 });
 
 provider.on("network", (newNetwork, oldNetwork) => {
-    console.log(`[PROVIDER] [${new Date().toISOString()}] Network changed:`, {
+    console.log(`[PROV] [${new Date().toISOString()}] Network changed:`, {
         from: oldNetwork?.name,
         to: newNetwork.name
     });
@@ -87,31 +100,31 @@ provider.on("network", (newNetwork, oldNetwork) => {
 let signer;
 if (process.env.PRIVATE_KEY) {
     signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-    console.log(`[WALLET] [${new Date().toISOString()}] Using wallet address: ${signer.address}`);
-    console.log(`[WALLET] [${new Date().toISOString()}] Connected to network: ${RPC_URL}`);
-    console.log(`[WALLET] [${new Date().toISOString()}] Contract address: ${SEP_CONTRACT_ADDY}`);
+    console.log(`[WLLT] [${new Date().toISOString()}] Using wallet address: ${signer.address}`);
+    console.log(`[WLLT] [${new Date().toISOString()}] Connected to network: ${RPC_URL}`);
+    console.log(`[WLLT] [${new Date().toISOString()}] Contract address: ${SEP_CONTRACT_ADDY}`);
 } else {
-    console.error("[WALLET] PRIVATE_KEY environment variable is required");
+    console.error("[WLLT] PRIVATE_KEY environment variable is required");
     process.exit(1);
 }
 
 // Initialize contract instance
-console.log(`[CONTRACT] [${new Date().toISOString()}] Creating contract instance with address: ${SEP_CONTRACT_ADDY}`);
+console.log(`[CONT] [${new Date().toISOString()}] Creating contract instance with address: ${SEP_CONTRACT_ADDY}`);
 const decxDAG = new ethers.Contract(SEP_CONTRACT_ADDY, contractAbi, signer);
 
 // Initialize ECIES service
-console.log(`[ECIES] [${new Date().toISOString()}] Creating ECIESService`);
+console.log(`[ECIE] [${new Date().toISOString()}] Creating ECIESService`);
 const eciesService = new ECIESService(process.env.PRIVATE_KEY);
 
 // Validate recipient public key
 const recipientPublicKey = process.env.PUBLIC_KEY;
 if (!recipientPublicKey) {
-    console.error("[CONFIG] PUBLIC_KEY environment variable is required");
+    console.error("[CONF] PUBLIC_KEY environment variable is required");
     process.exit(1);
 }
 
 // Initialize DEKService
-console.log(`[DEK] [${new Date().toISOString()}] Creating dEKService instance`);
+console.log(`[DEKS] [${new Date().toISOString()}] Creating dEKService instance`);
 const dekService = new DEKService(decxDAG, eciesService, recipientPublicKey);
 
 // ===================================
@@ -140,386 +153,17 @@ const storeTransaction = (requestId: string, data: { hash?: string; error?: stri
 // API ROUTES
 // ===================================
 
-// Health check endpoint
-app.get("/health", function (req: Request, res: Response) {
-    res.json({
-        status: "ok",
-        contractAddress: SEP_CONTRACT_ADDY,
-        signerAddress: signer.address
-    });
-});
+// Mount routes
+app.use("/api/health", healthRouter);
+app.use("/api/balance", balanceRouter);
+app.use("/api/press", pressRouter);
+app.use("/api/hash", hashRouter);
+app.use("/api/status", statusRouter);
+app.use("/api/release", releaseRouter);
 
-// Press content endpoint
-app.post("/press", function (req: Request, res: Response) {
-    const startTime = Date.now();
-    const requestId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-    console.log(`[PRESS] [${new Date().toISOString()}] Starting press operation (ID: ${requestId})`);
-
-    // Track if the request is still active
-    let isRequestActive = true;
-
-    req.on("close", () => {
-        isRequestActive = false;
-        console.log(
-            `[PRESS] [${new Date().toISOString()}] Client disconnected after ${(Date.now() - startTime) / 1000}s`
-        );
-    });
-
-    (async () => {
-        try {
-            const { content, recipientPublicKey, storeOnChain, privateKey } = req.body;
-
-            // Validate required fields
-            if (!content) {
-                return res.status(400).json({ error: "Content is required" });
-            }
-
-            console.log(`[PRESS] [${new Date().toISOString()}] Content length: ${content.length}`);
-            console.log(`[PRESS] [${new Date().toISOString()}] Store on chain: ${storeOnChain}`);
-
-            // Use provided recipient key or default to the server's configured key
-            const targetPublicKey = recipientPublicKey || process.env.PUBLIC_KEY;
-
-            // Validate recipient public key format
-            if (!targetPublicKey.startsWith("0x")) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Invalid recipient public key format",
-                    message: "Recipient public key must start with 0x"
-                });
-            }
-
-            console.log(
-                `[PRESS] [${new Date().toISOString()}] Using recipient public key: ${targetPublicKey.substring(0, 10)}...`
-            );
-
-            // Determine whether to store on chain (default to false for gas efficiency)
-            const shouldStoreOnChain = storeOnChain !== undefined ? storeOnChain : false;
-
-            // Warn if storing large content on chain
-            if (shouldStoreOnChain && content.length > 10) {
-                console.warn(
-                    `[PRESS] [${new Date().toISOString()}] WARNING: Storing ${content.length} characters on-chain may be expensive and could fail.`
-                );
-            }
-
-            try {
-                // Create a new signer if a private key is provided
-                let transactionSigner = signer;
-                let transactionDecxDAG = decxDAG;
-
-                if (privateKey) {
-                    console.log(`[PRESS] [${new Date().toISOString()}] Using provided private key for transaction`);
-                    transactionSigner = new ethers.Wallet(privateKey, provider);
-                    transactionDecxDAG = new ethers.Contract(SEP_CONTRACT_ADDY, contractAbi, transactionSigner);
-                }
-
-                console.log(`[PRESS] [${new Date().toISOString()}] Creating temporary dEKService instance`);
-                const tempDekService = new DEKService(transactionDecxDAG, eciesService, targetPublicKey);
-                const gasTracker = { totalGasUsed: ethers.parseUnits("0", "wei") };
-
-                console.log(`[PRESS] [${new Date().toISOString()}] Starting press operation with dEKService`);
-
-                // Add detailed logging for transaction submission
-                console.log(`[PRESS] [${new Date().toISOString()}] Content length: ${content.length}`);
-                console.log(`[PRESS] [${new Date().toISOString()}] Store on chain: ${shouldStoreOnChain}`);
-                console.log(
-                    `[PRESS] [${new Date().toISOString()}] Target public key: ${targetPublicKey.substring(0, 10)}...`
-                );
-                console.log(`[PRESS] [${new Date().toISOString()}] Transaction signer: ${transactionSigner.address}`);
-
-                // Log initial network state
-                const initialNetworkState = await provider.getNetwork();
-                console.log(`[PRESS] [${new Date().toISOString()}] Initial network state:`, {
-                    chainId: initialNetworkState.chainId,
-                    name: initialNetworkState.name
-                });
-
-                // Log initial gas state
-                const initialGasState = await provider.getFeeData();
-                console.log(`[PRESS] [${new Date().toISOString()}] Initial gas state:`, {
-                    gasPrice: ethers.formatUnits(initialGasState.gasPrice || 0, "gwei"),
-                    maxFeePerGas: ethers.formatUnits(initialGasState.maxFeePerGas || 0, "gwei"),
-                    maxPriorityFeePerGas: ethers.formatUnits(initialGasState.maxPriorityFeePerGas || 0, "gwei")
-                });
-
-                // Submit transaction to the blockchain
-                const result = await tempDekService.press(content, gasTracker, shouldStoreOnChain);
-
-                // Store the transaction hash
-                storeTransaction(requestId, { hash: result.finalHash });
-
-                // Return immediately with the transaction hash
-                console.log(
-                    `[PRESS] [${new Date().toISOString()}] Returning immediate response with transaction hash: ${result.finalHash}`
-                );
-                res.json({
-                    success: true,
-                    message: "Transaction submitted",
-                    contentLength: content.length,
-                    recipientPublicKey: targetPublicKey,
-                    storedOnChain: shouldStoreOnChain,
-                    requestId,
-                    transactionHash: result.finalHash,
-                    signerAddress: transactionSigner.address
-                });
-                console.log(`[PRESS] [${new Date().toISOString()}] ===== CURL COMMAND COMPLETED =====`);
-                console.log(
-                    `[PRESS] [${new Date().toISOString()}] Check status with: curl http://localhost:3000/status/${result.finalHash}`
-                );
-            } catch (error) {
-                console.error(`[PRESS] [${new Date().toISOString()}] Error in dEKService operation:`, error);
-                if (error instanceof Error) {
-                    console.error(`[PRESS] [${new Date().toISOString()}] Error stack:`, error.stack);
-                }
-                if (error instanceof Error && error.message.includes("Recipient public key")) {
-                    if (isRequestActive) {
-                        return res.status(400).json({
-                            success: false,
-                            error: "Invalid recipient public key",
-                            message: error.message
-                        });
-                    }
-                }
-                throw error;
-            }
-        } catch (error) {
-            console.error(`[PRESS] [${new Date().toISOString()}] Error in /press route:`, error);
-            if (error instanceof Error) {
-                console.error(`[PRESS] [${new Date().toISOString()}] Error stack:`, error.stack);
-            }
-            if (isRequestActive) {
-                return res.status(500).json({
-                    success: false,
-                    error: "An error occurred during pressing",
-                    message: error instanceof Error ? error.message : String(error)
-                });
-            }
-        }
-    })();
-});
-
-// Transaction status endpoint
-app.get("/status/:txHash", (req: Request, res: Response) => {
-    (async () => {
-        try {
-            const { txHash } = req.params;
-            console.log(`[STATUS] [${new Date().toISOString()}] Checking status for transaction: ${txHash}`);
-
-            const status = await dekService.checkTransactionStatus(txHash);
-            console.log(`[STATUS] [${new Date().toISOString()}] Transaction status:`, status);
-
-            return res.json({
-                success: true,
-                ...status
-            });
-        } catch (error) {
-            console.error(`[STATUS] [${new Date().toISOString()}] Error checking transaction status:`, error);
-            return res.status(500).json({
-                success: false,
-                error: "Failed to check transaction status",
-                message: error instanceof Error ? error.message : String(error)
-            });
-        }
-    })();
-});
-
-// Release content endpoint
-app.post("/release", function (req: Request, res: Response) {
-    (async () => {
-        try {
-            console.log("[RELEASE] Starting release operation");
-            const { finalHash, recipientPublicKey, encryptedContents, privateKey } = req.body;
-
-            if (!finalHash) {
-                return res.status(400).json({ error: "finalHash is required" });
-            }
-
-            console.log(`[RELEASE] Processing hash: ${finalHash}`);
-
-            // If a recipient key is provided, verify it matches the server's public key
-            if (recipientPublicKey && recipientPublicKey !== process.env.PUBLIC_KEY) {
-                return res.status(403).json({
-                    success: false,
-                    error: "Cannot decrypt content encrypted for a different recipient",
-                    message: "This content was encrypted for a different public key"
-                });
-            }
-
-            // Convert encryptedContents from base64 strings to Buffer objects if provided
-            let localEncryptedContents: Map<string, Buffer> | undefined;
-            if (encryptedContents) {
-                console.log("[RELEASE] Converting encrypted contents from base64");
-                localEncryptedContents = new Map();
-                for (const [hash, content] of Object.entries(encryptedContents)) {
-                    localEncryptedContents.set(hash, Buffer.from(content as string, "base64"));
-                }
-                console.log(`[RELEASE] Processed ${localEncryptedContents.size} encrypted contents`);
-            }
-
-            // Create a new signer if a private key is provided
-            let transactionSigner = signer;
-            let transactionDecxDAG = decxDAG;
-
-            if (privateKey) {
-                console.log(`[RELEASE] [${new Date().toISOString()}] Using provided private key for transaction`);
-                transactionSigner = new ethers.Wallet(privateKey, provider);
-                transactionDecxDAG = new ethers.Contract(SEP_CONTRACT_ADDY, contractAbi, transactionSigner);
-                console.log(`[RELEASE] [${new Date().toISOString()}] Transaction signer: ${transactionSigner.address}`);
-            }
-
-            // Create a temporary DEKService with the appropriate signer
-            const tempDekService = new DEKService(
-                transactionDecxDAG,
-                eciesService,
-                recipientPublicKey || process.env.PUBLIC_KEY
-            );
-
-            // Track gas usage
-            const gasTracker = { totalGasUsed: ethers.parseUnits("0", "wei") };
-
-            console.log("[RELEASE] Starting release operation with DEKService");
-            // Release content with optional local encrypted contents
-            const originalContent = await tempDekService.release(finalHash, gasTracker, localEncryptedContents);
-            console.log("[RELEASE] Release operation completed successfully");
-
-            console.log(`[RELEASE] Content length: ${originalContent.length}`);
-            console.log(`[RELEASE] Gas used: ${gasTracker.totalGasUsed.toString()}`);
-
-            return res.json({
-                success: true,
-                originalContent,
-                contentLength: originalContent.length,
-                gasUsed: gasTracker.totalGasUsed.toString(),
-                signerAddress: transactionSigner.address
-            });
-        } catch (error) {
-            console.error("[RELEASE] Error in /release route:", error);
-            return res.status(500).json({
-                success: false,
-                error: "An error occurred during releasing",
-                message: error instanceof Error ? error.message : String(error)
-            });
-        }
-    })();
-});
-
-// Get transaction hash by request ID
-app.get("/hash/:requestId", (req: Request, res: Response) => {
-    (async () => {
-        try {
-            const { requestId } = req.params;
-            console.log(`[HASH] [${new Date().toISOString()}] Checking hash for request ID: ${requestId}`);
-            console.log(`[HASH] [${new Date().toISOString()}] Current store size: ${transactionStore.size}`);
-            console.log(`[HASH] [${new Date().toISOString()}] Store keys:`, Array.from(transactionStore.keys()));
-
-            logTransactionStore("Retrieving", requestId);
-            const result = transactionStore.get(requestId);
-            console.log(`[HASH] [${new Date().toISOString()}] Retrieved result:`, result);
-
-            if (!result) {
-                logTransactionStore("Not found", requestId);
-                return res.status(404).json({
-                    success: false,
-                    error: "Transaction not found",
-                    message: "The request ID is invalid"
-                });
-            }
-
-            if (result.error) {
-                logTransactionStore("Found error", requestId, result.error);
-                return res.status(500).json({
-                    success: false,
-                    error: "Transaction failed",
-                    message: result.error
-                });
-            }
-
-            if (!result.hash) {
-                logTransactionStore("Still processing", requestId);
-                return res.status(202).json({
-                    success: true,
-                    status: "processing",
-                    message: "Transaction is still being processed"
-                });
-            }
-
-            logTransactionStore("Found hash", requestId, result.hash);
-            return res.json({
-                success: true,
-                transactionHash: result.hash
-            });
-        } catch (error) {
-            console.error(`[HASH] [${new Date().toISOString()}] Error retrieving transaction hash:`, error);
-            return res.status(500).json({
-                success: false,
-                error: "Failed to retrieve transaction hash",
-                message: error instanceof Error ? error.message : String(error)
-            });
-        }
-    })();
-});
-
-// Check wallet balance
-app.get("/balance", (req: Request, res: Response) => {
-    (async () => {
-        try {
-            // Get wallet address from query parameter or use server's wallet
-            const walletAddress = (req.query.address as string) || signer.address;
-
-            console.log(
-                `[BALANCE] [${new Date().toISOString()}] Checking wallet balance for address: ${walletAddress}`
-            );
-
-            // Get current network info
-            const network = await provider.getNetwork();
-
-            const balance = await provider.getBalance(walletAddress);
-            const balanceInEth = ethers.formatEther(balance);
-            console.log(
-                `[BALANCE] [${new Date().toISOString()}] Wallet balance: ${balanceInEth} ETH on ${network.name} (Chain ID: ${network.chainId})`
-            );
-
-            // Get network gas prices for reference
-            const feeData = await provider.getFeeData();
-            const gasPrice = feeData.gasPrice || ethers.parseUnits("0", "gwei");
-            const gasPriceGwei = ethers.formatUnits(gasPrice, "gwei");
-
-            // Estimate how many transactions can be sent with current balance
-            // Assuming 500,000 gas limit per transaction
-            const gasLimit = 500000;
-            const gasCost = gasPrice * BigInt(gasLimit);
-            const txCount = gasCost > 0 ? balance / gasCost : 0;
-
-            // Calculate recommended balance for at least one transaction
-            const recommendedBalance = gasCost * BigInt(3); // 3x safety buffer
-            const needsMoreFunds = balance < gasCost;
-
-            return res.json({
-                success: true,
-                address: walletAddress,
-                network: {
-                    name: network.name,
-                    chainId: network.chainId.toString(),
-                    rpcUrl: RPC_URL
-                },
-                balanceWei: balance.toString(),
-                balanceEth: balanceInEth,
-                networkGasPrice: gasPriceGwei + " gwei",
-                estimatedTxCount: Math.floor(Number(txCount)),
-                sufficientFunds: !needsMoreFunds,
-                recommendedMinBalanceWei: recommendedBalance.toString(),
-                recommendedMinBalanceEth: ethers.formatEther(recommendedBalance)
-            });
-        } catch (error) {
-            console.error(`[BALANCE] [${new Date().toISOString()}] Error checking wallet balance:`, error);
-            return res.status(500).json({
-                success: false,
-                error: "Failed to check wallet balance",
-                message: error instanceof Error ? error.message : String(error)
-            });
-        }
-    })();
+// Error handling middleware - must be last
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    errorHandler(err, req, res, next);
 });
 
 // ===================================
