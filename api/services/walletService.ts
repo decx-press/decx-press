@@ -61,21 +61,21 @@ provider.on("network", (newNetwork, oldNetwork) => {
 let signer;
 if (process.env.PRIVATE_KEY) {
     signer = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-    console.log(`[WLLT] [${new Date().toISOString()}] Using wallet address: ${signer.address}`);
-    console.log(`[WLLT] [${new Date().toISOString()}] Connected to network: ${RPC_URL}`);
-    console.log(`[WLLT] [${new Date().toISOString()}] Contract address: ${SEP_CONTRACT_ADDY}`);
+    console.log(`[WLT] [${new Date().toISOString()}] Using wallet address: ${signer.address}`);
+    console.log(`[WLT] [${new Date().toISOString()}] Connected to network: ${RPC_URL}`);
+    console.log(`[WLT] [${new Date().toISOString()}] Contract address: ${SEP_CONTRACT_ADDY}`);
 } else {
-    console.error("[WLLT] PRIVATE_KEY environment variable is required");
+    console.error("[WLT] PRIVATE_KEY environment variable is required");
     process.exit(1);
 }
 
 // Initialize contract instance
-console.log(`[CONT] [${new Date().toISOString()}] Creating contract instance with address: ${SEP_CONTRACT_ADDY}`);
+console.log(`[CNT] [${new Date().toISOString()}] Creating contract instance with address: ${SEP_CONTRACT_ADDY}`);
 const decxDAG = new ethers.Contract(SEP_CONTRACT_ADDY, contractAbi, signer);
 
 // Initialize ECIES service
 import { ECIESService } from "../../services/encryption/ECIESService";
-console.log(`[ECIE] [${new Date().toISOString()}] Creating ECIESService`);
+console.log(`[ECI] [${new Date().toISOString()}] Creating ECIESService`);
 const eciesService = new ECIESService(process.env.PRIVATE_KEY);
 
 // Validate recipient public key
@@ -87,7 +87,7 @@ if (!recipientPublicKey) {
 
 // Initialize DEKService
 import { DEKService } from "../../services/dEKService";
-console.log(`[DEKS] [${new Date().toISOString()}] Creating dEKService instance`);
+console.log(`[DEK] [${new Date().toISOString()}] Creating dEKService instance`);
 const dekService = new DEKService(decxDAG, eciesService, recipientPublicKey);
 
 export const getProvider = () => provider;
