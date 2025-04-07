@@ -167,7 +167,7 @@ app.post("/press", function (req: Request, res: Response) {
 
     (async () => {
         try {
-            const { content, recipientPublicKey, storeOnChain } = req.body;
+            const { content, recipientPublicKey, storeOnChain, privateKey } = req.body;
 
             // Validate required fields
             if (!content) {
@@ -204,8 +204,18 @@ app.post("/press", function (req: Request, res: Response) {
             }
 
             try {
+                // Create a new signer if a private key is provided
+                let transactionSigner = signer;
+                let transactionDecxDAG = decxDAG;
+
+                if (privateKey) {
+                    console.log(`[PRESS] [${new Date().toISOString()}] Using provided private key for transaction`);
+                    transactionSigner = new ethers.Wallet(privateKey, provider);
+                    transactionDecxDAG = new ethers.Contract(SEP_CONTRACT_ADDY, contractAbi, transactionSigner);
+                }
+
                 console.log(`[PRESS] [${new Date().toISOString()}] Creating temporary dEKService instance`);
-                const tempDekService = new DEKService(decxDAG, eciesService, targetPublicKey);
+                const tempDekService = new DEKService(transactionDecxDAG, eciesService, targetPublicKey);
                 const gasTracker = { totalGasUsed: ethers.parseUnits("0", "wei") };
 
                 console.log(`[PRESS] [${new Date().toISOString()}] Starting press operation with dEKService`);
@@ -216,6 +226,7 @@ app.post("/press", function (req: Request, res: Response) {
                 console.log(
                     `[PRESS] [${new Date().toISOString()}] Target public key: ${targetPublicKey.substring(0, 10)}...`
                 );
+                console.log(`[PRESS] [${new Date().toISOString()}] Transaction signer: ${transactionSigner.address}`);
 
                 // Log initial network state
                 const initialNetworkState = await provider.getNetwork();
@@ -249,7 +260,8 @@ app.post("/press", function (req: Request, res: Response) {
                     recipientPublicKey: targetPublicKey,
                     storedOnChain: shouldStoreOnChain,
                     requestId,
-                    transactionHash: result.finalHash
+                    transactionHash: result.finalHash,
+                    signerAddress: transactionSigner.address
                 });
                 console.log(`[PRESS] [${new Date().toISOString()}] ===== CURL COMMAND COMPLETED =====`);
                 console.log(
@@ -317,7 +329,7 @@ app.post("/release", function (req: Request, res: Response) {
     (async () => {
         try {
             console.log("[RELEASE] Starting release operation");
-            const { finalHash, recipientPublicKey, encryptedContents } = req.body;
+            const { finalHash, recipientPublicKey, encryptedContents, privateKey } = req.body;
 
             if (!finalHash) {
                 return res.status(400).json({ error: "finalHash is required" });
@@ -345,12 +357,30 @@ app.post("/release", function (req: Request, res: Response) {
                 console.log(`[RELEASE] Processed ${localEncryptedContents.size} encrypted contents`);
             }
 
+            // Create a new signer if a private key is provided
+            let transactionSigner = signer;
+            let transactionDecxDAG = decxDAG;
+
+            if (privateKey) {
+                console.log(`[RELEASE] [${new Date().toISOString()}] Using provided private key for transaction`);
+                transactionSigner = new ethers.Wallet(privateKey, provider);
+                transactionDecxDAG = new ethers.Contract(SEP_CONTRACT_ADDY, contractAbi, transactionSigner);
+                console.log(`[RELEASE] [${new Date().toISOString()}] Transaction signer: ${transactionSigner.address}`);
+            }
+
+            // Create a temporary DEKService with the appropriate signer
+            const tempDekService = new DEKService(
+                transactionDecxDAG,
+                eciesService,
+                recipientPublicKey || process.env.PUBLIC_KEY
+            );
+
             // Track gas usage
             const gasTracker = { totalGasUsed: ethers.parseUnits("0", "wei") };
 
             console.log("[RELEASE] Starting release operation with DEKService");
             // Release content with optional local encrypted contents
-            const originalContent = await dekService.release(finalHash, gasTracker, localEncryptedContents);
+            const originalContent = await tempDekService.release(finalHash, gasTracker, localEncryptedContents);
             console.log("[RELEASE] Release operation completed successfully");
 
             console.log(`[RELEASE] Content length: ${originalContent.length}`);
@@ -360,7 +390,8 @@ app.post("/release", function (req: Request, res: Response) {
                 success: true,
                 originalContent,
                 contentLength: originalContent.length,
-                gasUsed: gasTracker.totalGasUsed.toString()
+                gasUsed: gasTracker.totalGasUsed.toString(),
+                signerAddress: transactionSigner.address
             });
         } catch (error) {
             console.error("[RELEASE] Error in /release route:", error);
@@ -433,12 +464,17 @@ app.get("/hash/:requestId", (req: Request, res: Response) => {
 app.get("/balance", (req: Request, res: Response) => {
     (async () => {
         try {
-            console.log(`[BALANCE] [${new Date().toISOString()}] Checking wallet balance`);
+            // Get wallet address from query parameter or use server's wallet
+            const walletAddress = (req.query.address as string) || signer.address;
+
+            console.log(
+                `[BALANCE] [${new Date().toISOString()}] Checking wallet balance for address: ${walletAddress}`
+            );
 
             // Get current network info
             const network = await provider.getNetwork();
 
-            const balance = await provider.getBalance(signer.address);
+            const balance = await provider.getBalance(walletAddress);
             const balanceInEth = ethers.formatEther(balance);
             console.log(
                 `[BALANCE] [${new Date().toISOString()}] Wallet balance: ${balanceInEth} ETH on ${network.name} (Chain ID: ${network.chainId})`
@@ -461,7 +497,7 @@ app.get("/balance", (req: Request, res: Response) => {
 
             return res.json({
                 success: true,
-                address: signer.address,
+                address: walletAddress,
                 network: {
                     name: network.name,
                     chainId: network.chainId.toString(),
