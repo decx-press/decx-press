@@ -45,6 +45,7 @@ interface GasTracker {
  */
 interface PressResult {
     finalHash: string;
+    transactionHash: string;
     encryptedContents: Map<string, Buffer>;
 }
 
@@ -189,9 +190,19 @@ export class DEKService {
                 storedOnChain: storeOnChain
             });
 
-            // Return immediately with the transaction hash
+            // Wait for transaction receipt to get the content hash
+            const receipt = await tx.wait();
+            if (!receipt) {
+                throw new Error("Transaction failed - no receipt received");
+            }
+
+            // Get the content hash from the transaction receipt
+            const contentHash = receipt.logs[0].topics[1]; // First topic is the event signature, second is the hash
+
+            // Return the content hash and transaction hash
             return {
-                finalHash: tx.hash,
+                finalHash: contentHash,
+                transactionHash: tx.hash,
                 encryptedContents: new Map()
             };
         } catch (error) {
