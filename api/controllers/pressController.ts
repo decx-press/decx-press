@@ -48,16 +48,17 @@ export const pressContent = async (req: Request, res: Response) => {
         console.log(
             `[PRS] [${new Date().toISOString()}] [${requestId}] Pressing content with length: ${content.length}`
         );
-        const { finalHash, encryptedContents } = await dekService.press(content, recipientPublicKey);
+        const { finalHash, transactionHash, encryptedContents } = await dekService.press(content, recipientPublicKey);
 
         // Store transaction hash
-        storeTransaction(requestId, { hash: finalHash });
+        storeTransaction(requestId, { hash: transactionHash });
 
         console.log(`[PRS] [${new Date().toISOString()}] [${requestId}] Content pressed successfully`);
         return res.json({
             success: true,
             requestId,
-            finalHash,
+            contentHash: finalHash,
+            transactionHash,
             encryptedContents,
             signerAddress
         });
