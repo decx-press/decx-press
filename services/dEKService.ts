@@ -81,9 +81,15 @@ export class DEKService {
      * @param content - The content to press
      * @param gasTracker - Optional tracker for gas usage
      * @param storeOnChain - Whether to store encrypted content on-chain (default: false)
-     * @returns The final hash and map of encrypted contents
+     * @param customGasLimit - Optional custom gas limit for the transaction
+     * @returns The final hash, transaction hash, and map of encrypted contents
      */
-    async press(content: string, gasTracker?: GasTracker, storeOnChain: boolean = false): Promise<PressResult> {
+    async press(
+        content: string,
+        gasTracker?: GasTracker,
+        storeOnChain: boolean = false,
+        customGasLimit?: number
+    ): Promise<PressResult> {
         try {
             // Store original content for later use
             this.originalContent = content;
@@ -164,7 +170,7 @@ export class DEKService {
             });
 
             // Calculate dynamic gas limit based on content size and storage option
-            let gasLimit = 500000; // Base gas limit
+            let gasLimit = customGasLimit || 500000; // Use custom gas limit if provided, otherwise use base limit
             if (storeOnChain) {
                 // For on-chain storage, we need more gas depending on content size
                 // Each character takes approximately 20K-25K gas

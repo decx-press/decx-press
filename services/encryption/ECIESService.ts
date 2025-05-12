@@ -1,8 +1,9 @@
 import * as secp from "@noble/secp256k1";
 import { randomBytes, createCipheriv, createDecipheriv, createHmac } from "crypto";
-import { bytesToHex } from "@noble/hashes/utils";
+import { bytesToHex, hexToBytes } from "@noble/hashes/utils";
 import { hkdf } from "@noble/hashes/hkdf";
 import { sha512 } from "@noble/hashes/sha512";
+import { ethers } from "ethers";
 
 export class ECIESService {
     // Encryption info strings for key derivation
@@ -19,6 +20,7 @@ export class ECIESService {
     // Maximum sizes for our two types of content
     private readonly MAX_CHAR_SIZE = 4; // Maximum UTF-8 character size
     private readonly MAX_HASH_PAIR_SIZE = 139; // ["0x<32 bytes>","0x<32 bytes>"]
+    private readonly MAX_AES_KEY_SIZE = 64; // Maximum size for AES key (32 bytes hex = 64 chars)
 
     constructor(private privateKey: string) {
         if (!privateKey.startsWith("0x")) {
@@ -110,6 +112,47 @@ export class ECIESService {
     }
 
     /**
+     * Encrypts an AES key using ECIES.
+     * This is specifically designed for encrypting AES keys in the WACSE system.
+     * @param aesKeyHex - The AES key as a hex string
+     * @param publicKeyHex - The public key to encrypt the AES key with
+     * @returns The encrypted AES key
+     * @throws Error if AES key size exceeds maximum
+     */
+    async encryptAesKey(aesKeyHex: string, publicKeyHex: string): Promise<Buffer> {
+        // Validate AES key size
+        if (aesKeyHex.length > this.MAX_AES_KEY_SIZE) {
+            throw new Error(`AES key size ${aesKeyHex.length} exceeds maximum allowed size ${this.MAX_AES_KEY_SIZE}`);
+        }
+
+        // Validate hex format
+        if (!/^[0-9a-fA-F]+$/.test(aesKeyHex)) {
+            throw new Error("AES key must be a valid hex string");
+        }
+
+        // Use the existing encrypt method with the AES key as content
+        return this.encrypt(aesKeyHex, publicKeyHex);
+    }
+
+    /**
+     * Decrypts an AES key that was encrypted with ECIES.
+     * @param encryptedAesKey - The encrypted AES key
+     * @returns The decrypted AES key as a hex string
+     * @throws Error if decryption fails
+     */
+    async decryptAesKey(encryptedAesKey: Buffer): Promise<string> {
+        // Use the existing _decryptRaw method
+        const decryptedHex = await this._decryptRaw(encryptedAesKey);
+
+        // Validate hex format
+        if (!/^[0-9a-fA-F]+$/.test(decryptedHex)) {
+            throw new Error("Decrypted data is not a valid hex string");
+        }
+
+        return decryptedHex;
+    }
+
+    /**
      * Decrypts and validates a hash pair.
      * @param encryptedData - The encrypted data to decrypt
      * @returns Array of two hash strings
@@ -157,6 +200,16 @@ export class ECIESService {
         }
 
         return content;
+    }
+
+    /**
+     * General-purpose decrypt method that returns the raw decrypted data.
+     * @param encryptedData - The encrypted data to decrypt
+     * @returns The decrypted data as a string
+     * @throws Error if decryption fails
+     */
+    async decrypt(encryptedData: Buffer): Promise<string> {
+        return this._decryptRaw(encryptedData);
     }
 
     /**
@@ -256,5 +309,41 @@ export class ECIESService {
      */
     private computeMAC(macKey: Buffer, data: Buffer): Buffer {
         return createHmac("sha256", macKey).update(data).digest();
+    }
+
+    /**
+     * Derives a public key from a wallet address.
+     * Note: This is a simplified approach. In a real implementation,
+     * you would need a more sophisticated method to derive the public key.
+     * @param address - The Ethereum wallet address
+     * @returns A public key derived from the address
+     */
+    static derivePublicKeyFromAddress(address: string): string {
+        // This is a placeholder implementation
+        // In a real implementation, you would need to:
+        // 1. Verify the address is valid
+        // 2. Use a more sophisticated method to derive the public key
+        // 3. Possibly require the user to provide their public key
+
+        // For now, we'll just return the address as a placeholder
+        return address;
+    }
+
+    /**
+     * Verifies a signature against a message and address.
+     * @param message - The message that was signed
+     * @param signature - The signature to verify
+     * @param address - The address that should have signed the message
+     * @returns True if the signature is valid, false otherwise
+     */
+    static verifySignature(message: string, signature: string, address: string): boolean {
+        try {
+            // Use ethers.js to verify the signature
+            const recoveredAddress = ethers.verifyMessage(message, signature);
+            return recoveredAddress.toLowerCase() === address.toLowerCase();
+        } catch (error) {
+            console.error("Error verifying signature:", error);
+            return false;
+        }
     }
 }
